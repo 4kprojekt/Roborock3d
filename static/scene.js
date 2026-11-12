@@ -3,7 +3,8 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { EVENT_STYLE } from "./history.js";
-import { decodeLayer, mapBounds, floorGrid, idwGrid, signalRGB, segmentColor, batteryColor, splitWallRuns } from "./mapdata.js";
+import { decodeLayer, mapBounds, floorGrid, wifiGrid, signalRGB, segmentColor, batteryColor, splitWallRuns } from "./mapdata.js";
+const WIFI_CONTOUR_DB = 6;   // heatmap contour lines every 6 dBm
 
 const ACC = "#C8FF3D", CYAN = "#38E1F0";
 const HEADING_OFFSET_DEG = -90; // driving direction = Valetudo angle - 90 deg (checked against a recorded run)
@@ -188,13 +189,16 @@ export function createScene(el, overlay) {
     S.wifi = report;
     clear(G.wifi);
     if (!S.map || !report?.cells?.length) return;
-    const floor = floorGrid(S.map), hm = idwGrid(report.cells, report.cell, floor, S.ps, 2, 150);
+    const floor = floorGrid(S.map), hm = wifiGrid(report.cells, report.cell, floor, S.ps);
     const cv = document.createElement("canvas"); cv.width = hm.w; cv.height = hm.h;
     const ctx = cv.getContext("2d"), img = ctx.createImageData(hm.w, hm.h);
+    const band = i => Math.floor(hm.values[i] / WIFI_CONTOUR_DB);
     for (let i = 0; i < hm.values.length; i++) {
       if (Number.isNaN(hm.values[i])) continue;
       const [r, g, b] = signalRGB(hm.values[i]);
-      img.data.set([r, g, b, 150], i * 4);
+      // contour line where the signal crosses a multiple of WIFI_CONTOUR_DB (NaN neighbours compare false)
+      const line = ((i + 1) % hm.w && band(i + 1) < band(i)) || band(i - 1) < band(i) || band(i + hm.w) < band(i) || band(i - hm.w) < band(i);
+      img.data.set(line ? [r * 0.45, g * 0.45, b * 0.45, 230] : [r, g, b, 170], i * 4);
     }
     ctx.putImageData(img, 0, 0);
     // the canvas covers ceil(w/step)*step pixels; stretch it over exactly that area

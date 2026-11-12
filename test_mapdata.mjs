@@ -1,6 +1,6 @@
 // Run: node test_mapdata.mjs
 import assert from "node:assert/strict";
-import { decodeLayer, mapBounds, signalRGB, signalColor, segmentColor, wallGrid, floorGrid, raycast, idwGrid,
+import { decodeLayer, mapBounds, signalRGB, signalColor, segmentColor, wallGrid, floorGrid, raycast, wifiGrid,
   splitWallRuns } from "./static/mapdata.js";
 
 // RLE example straight from Valetudo's MapLayer.js: [37,5,3] = (37,5),(38,5),(39,5)
@@ -14,9 +14,9 @@ assert.deepEqual(
 assert.equal(mapBounds({ layers: [] }), null);
 
 assert.deepEqual(signalRGB(-95), [214, 51, 74]);   // clamped to the red end
-assert.deepEqual(signalRGB(-52), [123, 224, 74]);
+assert.deepEqual(signalRGB(-54), [123, 224, 74]);
 assert.deepEqual(signalRGB(-78), [240, 138, 36]);  // exactly on a stop
-assert.equal(signalColor(-40, 0.5), "rgba(123,224,74,0.5)");
+assert.equal(signalColor(-30, 0.5), "rgba(93,216,255,0.5)");  // clamped to the cyan end
 assert.equal(segmentColor("3"), segmentColor(3));
 
 // vertical wall at pixel x=20 (y 0..40), origin at pixel (10,20), 5 cm/px
@@ -35,7 +35,7 @@ assert.equal(scan[2].hit, false);                       // 180° -> leaves the m
 const floor = floorGrid(wallMap);
 assert.equal(floor.data[0], 1);
 assert.equal(floor.data[20], 0); // the wall column is not floor
-const hm = idwGrid([[0, 100, -40, 5], [75, 100, -80, 5]], 25, floor, 5, 2, 80);
+const hm = wifiGrid([[0, 100, -40, 5], [75, 100, -80, 5]], 25, floor, 5, 2, 80);
 const at = (xcm, ycm) => hm.values[Math.floor(ycm / 5 / hm.step) * hm.w + Math.floor(xcm / 5 / hm.step)];
 assert.ok(at(12, 110) > -50 && at(88, 110) < -70, `${at(12, 110)} ${at(88, 110)}`);
 assert.ok(at(50, 110) < at(12, 110) && at(50, 110) > at(88, 110));  // smooth in between

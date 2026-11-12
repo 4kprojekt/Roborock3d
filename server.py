@@ -57,6 +57,7 @@ ACTIVE = {"cleaning", "moving", "returning", "manual_control", "paused"}
 SESSION_END_AFTER_S = 30
 FRAME_SCAN_POINTS = 90
 WIFI_CELL_CM = 25
+WIFI_MIN_MOVE_CM = 15
 PHOTO_TYPES = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}
 PHOTO_MAX_BYTES = 15 * 1024 * 1024
 # writes the panel/MCP may proxy to Valetudo: every robot capability + timers, Valetudo events, log level.
@@ -303,7 +304,8 @@ def poller(interval):
             attrs = get_json("/api/v2/robot/state/attributes")
             st = next((a for a in attrs if a["__class"] == "StatusStateAttribute"), {})
             bat = next((a for a in attrs if a["__class"] == "BatteryStateAttribute"), {})
-            if tick % 3 == 0:
+            fresh = tick % 3 == 0 or st.get("value") in ACTIVE   # while driving: a reading every tick
+            if fresh:
                 STATUS["wifi"] = get_json("/api/v2/robot/capabilities/WifiConfigurationCapability").get("details") or {}
             status, _, body = FETCH("/api/v2/robot/state/map")
             m = update_map(body) if status == 200 else {}
@@ -318,10 +320,11 @@ def poller(interval):
                 POSE.update(x=pos["points"][0], y=pos["points"][1],
                             angle=(pos.get("metaData") or {}).get("angle", 0), t=now, src="map")
             sig = STATUS["wifi"].get("signal")
-            if POSE["x"] is not None and sig is not None:
-                key = (round(POSE["x"] / 5), round(POSE["y"] / 5), sig)
-                if key != last_sample:  # robot parked on the dock = no new samples
-                    last_sample = key
+            # only a reading taken this tick (a stale one would be pinned to the wrong place), and only after
+            # the robot moved WIFI_MIN_MOVE_CM: parked on the dock = one sample, not thousands
+            if fresh and POSE["x"] is not None and sig is not None:
+                if last_sample is None or math.hypot(POSE["x"] - last_sample[0], POSE["y"] - last_sample[1]) >= WIFI_MIN_MOVE_CM:
+                    last_sample = (POSE["x"], POSE["y"])
                     row = {"t": round(now), "x": round(POSE["x"]), "y": round(POSE["y"]), "signal": sig}
                     with lock:
                         WIFI.append(row)

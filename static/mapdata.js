@@ -52,36 +52,40 @@ export function raycast(grid, ps, origin, rays = 360, maxCm = 800) {
   return out;
 }
 
-// Smooth Wi-Fi heatmap: inverse-distance-weighted dBm on a coarse grid over the floor.
+// Smooth Wi-Fi heatmap: Gaussian-weighted average of dBm over the floor (single RSSI readings jump by a few dB,
+// so each point blends the measurements around it instead of showing a bullseye per sample).
 // cells = [[x_cm, y_cm, dBm, n], ...] (server's 25 cm averages), floor = floorGrid(map), step = map pixels per
 // heatmap cell. A heatmap cell gets a value only on the floor and within `reach` cm of a measurement
 // (no guessing about rooms the robot never drove through). -> { w, h, step, values: Float32Array (NaN = none) }
-export function idwGrid(cells, cellCm, floor, ps, step = 2, reach = 120) {
+// sigma [cm] = smoothing radius: bigger = calmer map, smaller = more local detail.
+export function wifiGrid(cells, cellCm, floor, ps, step = 1, reach = 150, sigma = 45) {
   const w = Math.ceil(floor.w / step), h = Math.ceil(floor.h / step), values = new Float32Array(w * h).fill(NaN);
-  const pts = cells.map(c => [c[0] + cellCm / 2, c[1] + cellCm / 2, c[2]]);
-  const reach2 = reach * reach;
+  // a cell measured many times (the dock) counts at most 5x, so it does not flatten its surroundings
+  const pts = cells.map(c => [c[0] + cellCm / 2, c[1] + cellCm / 2, c[2], Math.min(c[3] ?? 1, 5)]);
+  const reach2 = reach * reach, k = 1 / (2 * sigma * sigma);
   for (let gy = 0; gy < h; gy++) {
     for (let gx = 0; gx < w; gx++) {
       const px = Math.min(floor.w - 1, gx * step + (step >> 1)), py = Math.min(floor.h - 1, gy * step + (step >> 1));
       if (!floor.data[py * floor.w + px]) continue;
       const x = (floor.minX + px + 0.5) * ps, y = (floor.minY + py + 0.5) * ps;
-      let sum = 0, wsum = 0, near = Infinity;
-      for (const [sx, sy, v] of pts) {
+      let sum = 0, wsum = 0;
+      for (const [sx, sy, v, n] of pts) {
         const d2 = (sx - x) ** 2 + (sy - y) ** 2;
-        if (d2 < near) near = d2;
-        const wgt = 1 / (d2 + 400); // +20 cm^2 softening: no spikes at the sample itself
+        if (d2 > reach2) continue;
+        const wgt = n * Math.exp(-d2 * k);
         sum += v * wgt; wsum += wgt;
       }
-      if (near <= reach2) values[gy * w + gx] = sum / wsum;
+      if (wsum > 0) values[gy * w + gx] = sum / wsum;
     }
   }
   return { w, h, step, values };
 }
 
-// Design palette: -90 red, -78 orange, -66 yellow, -52 green.
-const WIFI_STOPS = [[-90, [214, 51, 74]], [-78, [240, 138, 36]], [-66, [242, 210, 60]], [-52, [123, 224, 74]]];
+// Palette: -90 red, -78 orange, -66 yellow, -54 green, -40 cyan (very strong, close to the router).
+// The legend in index.html repeats these stops.
+const WIFI_STOPS = [[-90, [214, 51, 74]], [-78, [240, 138, 36]], [-66, [242, 210, 60]], [-54, [123, 224, 74]], [-40, [93, 216, 255]]];
 export function signalRGB(dbm) {
-  const c = Math.max(-90, Math.min(-52, dbm));
+  const c = Math.max(-90, Math.min(-40, dbm));
   let i = 0;
   while (i < WIFI_STOPS.length - 2 && c > WIFI_STOPS[i + 1][0]) i++;
   const [v0, c0] = WIFI_STOPS[i], [v1, c1] = WIFI_STOPS[i + 1], t = (c - v0) / (v1 - v0);

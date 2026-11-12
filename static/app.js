@@ -88,7 +88,7 @@ function showState() {
   scene?.setLiveEvents(st.events.filter(e => st.t - e.t < 3600));
   showSensors(sn);
   showEvents(st.events);
-  $("#f-sync").textContent = "Ostatnia synchronizacja " + new Date().toLocaleTimeString("pl-PL");
+  $("#f-sync").textContent = "Ostatnia synchronizacja " + new Date().toLocaleTimeString(LOCALE);
 }
 
 function showSensors(sn) {
@@ -109,7 +109,7 @@ function showEvents(events) {
   $("#events").innerHTML = [...events].reverse().slice(0, 40).map(e => {
     const st = EVENT_STYLE[e.k] ?? ["#A3AEB9"];
     const extra = e.side ? ` (${e.side})` : e.value != null ? ` (${e.value}${e.base ? " / norma " + e.base : ""})` : e.text ? `: ${e.text}` : "";
-    return `<li><span class="mono" style="font-size:12px;color:var(--muted)">${new Date(e.t * 1000).toLocaleTimeString("pl-PL")}</span>
+    return `<li><span class="mono" style="font-size:12px;color:var(--muted)">${new Date(e.t * 1000).toLocaleTimeString(LOCALE)}</span>
       <span style="width:8px;height:8px;background:${st[0]};margin-top:5px"></span><span style="font-size:13px;line-height:1.45">${esc(e.msg)}${esc(extra)}</span></li>`;
   }).join("") || `<li><span></span><span></span><span class="kv">Brak zdarzeń.</span></li>`;
 }
@@ -300,7 +300,7 @@ function drawTimers() {
 function drawHistorySummary() {
   const tot = S.info.total ?? {};
   $("#hi-sum").innerHTML = [["Zapisane tutaj", `${S.sessions.length} przejazdów`], ["Robot łącznie", tot.count != null ? `${tot.count} sprzątań` : "—"],
-    ["Łączny czas", tot.time != null ? `${Math.round(tot.time / 3600)} h` : "—"], ["Powierzchnia", tot.area != null ? `${Math.round(tot.area / 1e4).toLocaleString("pl-PL")} m²` : "—"]]
+    ["Łączny czas", tot.time != null ? `${Math.round(tot.time / 3600)} h` : "—"], ["Powierzchnia", tot.area != null ? `${Math.round(tot.area / 1e4).toLocaleString(LOCALE)} m²` : "—"]]
     .map(([l, v]) => `<div style="padding:6px 14px"><div class="lbl s">${l}</div><div style="font-weight:700">${v}</div></div>`).join("");
 }
 
@@ -311,10 +311,10 @@ async function loadSessions() {
     const ev = Object.entries(s.events ?? {}).filter(([k]) => EVENT_STYLE[k] && !["session", "status"].includes(k));
     const used = s.bat_start != null ? s.bat_start - s.bat_end : null, col = s.active ? "var(--acc)" : "var(--green)";
     return `<tr class="rowh ${S.replay?.meta.id === s.id ? "sel" : ""}" data-id="${esc(s.id)}">
-      <td class="mono">${new Date(s.start * 1000).toLocaleString("pl-PL", { day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" })}</td>
+      <td class="mono">${new Date(s.start * 1000).toLocaleString(LOCALE, { day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" })}</td>
       <td class="mono">${fmtDur(s.duration_s)}</td><td>${s.type === "explore" ? "Skanowanie" : "Sprzątanie"}</td><td class="mono">${s.distance_m} m</td>
       <td class="mono">${used != null ? `−${used}% <span style="color:var(--muted)">(${s.bat_start}→${s.bat_end})</span>` : "—"}</td>
-      <td>${ev.map(([k, n]) => `<span class="tag" style="border-color:${EVENT_STYLE[k][0]};color:${EVENT_STYLE[k][0]};margin:0 4px 2px 0" title="${EVENT_STYLE[k][1]}">${n}× ${esc(EVENT_STYLE[k][1].split(" ")[0])}</span>`).join("") || `<span class="mono" style="color:var(--muted)">—</span>`}</td>
+      <td>${ev.map(([k, n]) => `<span class="tag" style="border-color:${EVENT_STYLE[k][0]};color:${EVENT_STYLE[k][0]};margin:0 4px 2px 0" title="${EVENT_STYLE[k][1]}">${n}× ${esc(i18n(EVENT_STYLE[k][1]).split(" ")[0])}</span>`).join("") || `<span class="mono" style="color:var(--muted)">—</span>`}</td>
       <td><span class="tag" style="border-color:${col};color:${col}"><span class="${s.active ? "blink" : ""}" style="width:6px;height:6px;background:${col}"></span>${s.active ? "W toku" : "Zapisano"}</span></td></tr>`;
   }).join("") || `<tr><td colspan="7" class="kv">Brak zapisanych przejazdów. Każde sprzątanie i skanowanie zapisuje się automatycznie od teraz.</td></tr>`;
   if (!S.replay) drawChart();
@@ -328,7 +328,7 @@ function drawChart() {
   const cv = $("#chart");
   if (S.replay) {
     const R = S.replay, r = R.rows[R.idx], series = $("#r-series").value;
-    $("#c-title").textContent = "Przejazd " + new Date(R.rows[0].t * 1000).toLocaleString("pl-PL", { day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" });
+    $("#c-title").textContent = "Przejazd " + new Date(R.rows[0].t * 1000).toLocaleString(LOCALE, { day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" });
     drawReplayChart(cv, R.rows, R.events, R.idx, series);
     const kinds = [...new Set(R.events.map(e => e.k))].filter(k => EVENT_STYLE[k] && !["session", "status"].includes(k));
     $("#c-legend").innerHTML = `<span>linia: bateria (kolor = poziom)</span>${series ? `<span style="color:${SERIES[series][1]}">— ${SERIES[series][0]}</span>` : ""}`
@@ -509,7 +509,7 @@ async function loadHot() {
   $("#hs-list").innerHTML = hs.slice(0, 25).map(h => `<div style="display:flex;gap:10px;align-items:center;border:1px solid var(--line);padding:6px 8px">
     <span class="mono" style="font-weight:700;color:${h.near_wall < 0.6 ? "var(--orange)" : "var(--mid)"};min-width:46px">⚠ ${h.id}</span>
     <span style="flex:1;min-width:0;font-size:12px">${h.n}× ${esc(Object.entries(h.kinds).map(([k, n]) => `${k} ${n}`).join(", "))} · ${h.days} ${h.days === 1 ? "dzień" : "dni"}<br>
-      <span class="mono" style="font-size:10px;color:var(--muted)">${esc(h.what)} · (${h.x}, ${h.y}) · ostatnio ${new Date(h.last * 1000).toLocaleString("pl-PL", { day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" })}</span></span>
+      <span class="mono" style="font-size:10px;color:var(--muted)">${esc(h.what)} · (${h.x}, ${h.y}) · ostatnio ${new Date(h.last * 1000).toLocaleString(LOCALE, { day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" })}</span></span>
     <button class="chip sm" data-go="${h.x},${h.y}" title="Wyślij robota w to miejsce">Jedź</button><button class="chip sm" data-block="${h.id}" title="Strefa zakazana wokół tego miejsca">Zablokuj</button></div>`).join("")
     || `<div class="kv">Brak powtarzających się problemów.</div>`;
   if (!rs) return;
@@ -573,7 +573,7 @@ async function loadVF() {
         <select id="vf-t-fan"><option value="">moc: bez zmiany</option>${(S.info.fan ?? []).map(f => `<option>${esc(f)}</option>`).join("")}</select></div>
       <span class="kv">Bez zaznaczonych pokoi = całe mieszkanie.</span><button class="chip" id="vf-t-add">Dodaj sprzątanie</button></div></details>`));
   out.push(card("Mapa", `${pmap ? `<label class="mono" style="font-size:12px"><input type="checkbox" id="vf-pmap" ${pmap.enabled ? "checked" : ""}> trwała mapa (wyłączenie = mapa od zera przy każdym sprzątaniu)</label>` : ""}
-    ${(snaps ?? []).map(sn => `<div style="font-size:12px">Kopia ${esc(sn.id)} · ${new Date(sn.timestamp).toLocaleString("pl-PL")} <button class="chip sm" data-snap="${esc(sn.id)}">Przywróć</button></div>`).join("")}
+    ${(snaps ?? []).map(sn => `<div style="font-size:12px">Kopia ${esc(sn.id)} · ${new Date(sn.timestamp).toLocaleString(LOCALE)} <button class="chip sm" data-snap="${esc(sn.id)}">Przywróć</button></div>`).join("")}
     ${has("MapResetCapability") ? `<button class="chip" id="vf-reset" style="color:var(--red);border-color:var(--red)">Usuń mapę (reset)</button>` : ""}`));
   out.push(card("Wi-Fi", `<span class="kv">${esc(S.state?.wifi?.ssid ?? "—")} · ${S.state?.wifi?.signal ?? "—"} dBm · ${esc((S.state?.wifi?.ips ?? [])[0] ?? "")}</span>
     <button class="chip" id="vf-scan">Skanuj sieci</button><div id="vf-scan-out" class="kv"></div>
@@ -581,7 +581,7 @@ async function loadVF() {
       <span class="kv">SSID, hasło. Po zmianie robot dostanie nowy adres IP w nowej sieci.</span><button class="chip" id="vf-wifi-go">Zapisz</button></details>`));
   if (quirks?.length) out.push(card("Ustawienia firmware (quirks)", quirks.map((q, i) => `<div style="font-size:12px"><b>${esc(q.title)}</b><br><span class="kv">${esc(q.description)}</span><br>
     <select data-quirk="${i}">${q.options.map(o => `<option ${o === q.value ? "selected" : ""}>${esc(o)}</option>`).join("")}</select></div>`).join("")));
-  out.push(card("Zdarzenia Valetudo", (vevents ?? []).filter(e => !e.processed).map(e => `<div style="font-size:12px">${esc(e.__class.replace("ValetudoEvent", ""))} · ${new Date(e.timestamp).toLocaleString("pl-PL")} ${esc(e.message ?? e.type ?? e.subType ?? "")}
+  out.push(card("Zdarzenia Valetudo", (vevents ?? []).filter(e => !e.processed).map(e => `<div style="font-size:12px">${esc(e.__class.replace("ValetudoEvent", ""))} · ${new Date(e.timestamp).toLocaleString(LOCALE)} ${esc(e.message ?? e.type ?? e.subType ?? "")}
     <button class="chip sm" data-vev="${esc(e.id)}">OK</button></div>`).join("") || `<span class="kv">Brak nowych zdarzeń.</span>`));
   out.push(card("Log i system", `<div style="display:flex;gap:6px;align-items:center">poziom logu <select id="vf-loglvl">${(loglvl?.presets ?? []).map(p => `<option ${p === loglvl.current ? "selected" : ""}>${p}</option>`).join("")}</select><button class="chip sm" id="vf-log">Pokaż log</button></div>
     <span class="kv">Valetudo <b>${esc(ver?.release ?? "?")}</b> · firmware <b>${esc(props?.firmwareVersion ?? "?")}</b><br>pamięć wolna <b>${host ? Math.round(host.mem.free / 1048576) : "—"} / ${host ? Math.round(host.mem.total / 1048576) : "—"} MB</b> · obciążenie <b>${host?.load?.["1"]?.toFixed(2) ?? "—"}</b> · działa <b>${host ? Math.round(host.uptime / 3600) : "—"} h</b></span>
@@ -625,7 +625,7 @@ $("#vf").onclick = e => {
       pre_actions: fan ? [{ type: "fan_speed_control", params: { value: fan } }] : [] }); await loadVF(); await loadInfo(); });
   }
   if (d.snap) confirm("Przywrócić tę kopię mapy? Obecna mapa zostanie zastąpiona.") && act(() => req("PUT", CAPP + "MapSnapshotCapability", { action: "restore", id: d.snap }, true));
-  if (id === "vf-reset" && confirm("Usunąć mapę robota? Pokoje, strefy zakazane i nazwy pokoi znikną. Tego nie da się cofnąć.") && prompt("Wpisz USUŃ, żeby potwierdzić:") === "USUŃ")
+  if (id === "vf-reset" && confirm("Usunąć mapę robota? Pokoje, strefy zakazane i nazwy pokoi znikną. Tego nie da się cofnąć.") && prompt("Wpisz USUŃ, żeby potwierdzić:") === i18n("USUŃ"))
     act(() => req("PUT", CAPP + "MapResetCapability", { action: "reset" }, true));
   if (id === "vf-scan") act(async () => { const l = await api(CAPP + "WifiScanCapability");
     $("#vf-scan-out").innerHTML = l.sort((a, b) => b.details.signal - a.details.signal).map(n => `<div>${esc(n.details.ssid || "(ukryta)")} · <b style="color:${signalColor(n.details.signal)}">${n.details.signal} dBm</b></div>`).join(""); });

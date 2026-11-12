@@ -13,7 +13,11 @@ Wi-Fi heatmap, "problem spots" where the robot keeps bumping into things, no-go 
 > [!NOTE]
 > **Tested only on a Roborock S5 (S50/S55 family) with firmware 2034 and Valetudo 2026.10.0.**
 > Other models (S5 Max, S6, S7, ...) have different firmware, processes and lidar formats. The Valetudo part
-> may work, the lidar tap will most likely need changes. The panel UI is in Polish.
+> may work, the lidar tap will most likely need changes.
+
+The panel is in English, or Polish when your browser language is Polish. The `PL` / `EN` button in the header
+switches it. Translations live in `static/i18n.js`: a Polish to English dictionary applied to the page.
+Strings it misses are listed in `window.i18nMissing` in the browser console. MCP tool descriptions are still Polish.
 
 ## What you need
 

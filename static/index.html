@@ -86,6 +86,7 @@ details{border-bottom:1px solid var(--line);padding:6px 0}summary{cursor:pointer
 pre{white-space:pre-wrap;word-break:break-all;font-size:11px;color:var(--mid);margin:6px 0;font-family:'JetBrains Mono',monospace}
 @media (prefers-reduced-motion: reduce){.blink,.bseg.last,.fadeup{animation:none}}
 </style>
+<script src="i18n.js"></script>
 </head>
 <body>
 <header>
@@ -97,6 +98,7 @@ pre{white-space:pre-wrap;word-break:break-all;font-size:11px;color:var(--mid);ma
       <span id="h-model" style="font-weight:700;font-size:18px;letter-spacing:.02em">Roborock S5</span>
       <span id="h-sub" class="mono" style="font-size:11px;color:var(--muted);letter-spacing:.08em">by 4Kprojekt</span>
     </div>
+    <button id="lang" class="chip sm" title="Język" data-no-i18n>EN</button>
   </div>
   <div class="strip">
     <div><span class="lbl">Stan</span><span class="val" style="display:flex;align-items:center;gap:8px"><span id="h-dot" style="width:8px;height:8px;background:var(--acc)"></span><span id="h-status">—</span></span></div>
@@ -138,8 +140,8 @@ pre{white-space:pre-wrap;word-break:break-all;font-size:11px;color:var(--mid);ma
       <div class="hud mono" style="right:16px;top:16px;text-align:right;padding:10px 12px" id="hud-pos"></div>
       <div class="hud" style="left:16px;bottom:16px;width:290px;display:flex;flex-direction:column;gap:8px">
         <span class="lbl">Zasięg Wi-Fi · dBm</span>
-        <div style="height:10px;background:linear-gradient(90deg,#D6334A,#F08A24,#F2D23C,#7BE04A)"></div>
-        <div class="mono" style="display:flex;justify-content:space-between;font-size:10px;color:var(--mid)"><span>−90</span><span>−78</span><span>−66</span><span>−52</span></div>
+        <div style="height:10px;background:linear-gradient(90deg,#D6334A 0%,#F08A24 24%,#F2D23C 48%,#7BE04A 72%,#5DD8FF 100%)"></div>
+        <div class="mono" style="display:flex;justify-content:space-between;font-size:10px;color:var(--mid)"><span>−90</span><span>−78</span><span>−66</span><span>−54</span><span>−40</span></div>
         <div class="mono" style="display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:4px;font-size:10px;color:var(--mid)">
           <span><span style="display:inline-block;width:8px;height:8px;background:var(--cyan)"></span> LIDAR</span>
           <span><span style="display:inline-block;width:12px;height:2px;background:var(--acc);vertical-align:middle"></span> TRASA</span>
