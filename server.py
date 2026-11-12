@@ -12,13 +12,16 @@
 - photos: room pictures pinned to a wall segment, shown in the 3D view
 
 Usage:
-  python server.py                                 # robot http://192.168.0.25, tap via ~/.ssh/roborock
+  python server.py                                 # robot from ROBOROCK_URL (.env), tap via ROBOROCK_SSH_KEY
+  python server.py --robot http://<robot-ip>       # or pass it directly
   python server.py --robot mock                    # fake robot, no hardware needed (no tap, no driving)
+Settings: copy .env.example to .env (see README "Configuration").
 """
 import argparse
 import datetime
 import json
 import math
+import os
 import re
 import subprocess
 import threading
@@ -1105,16 +1108,32 @@ class Handler(SimpleHTTPRequestHandler):
         pass
 
 
+def load_env(path=ROOT / ".env"):
+    """KEY=value lines from .env; real environment variables win."""
+    if path.exists():
+        for line in path.read_text(encoding="utf-8").splitlines():
+            k, sep, v = line.partition("=")
+            if sep and not line.lstrip().startswith("#"):
+                os.environ.setdefault(k.strip(), v.strip().strip('"'))
+
+
 def main():
     global FETCH, BASE
+    load_env()
+    env = os.environ.get
     ap = argparse.ArgumentParser()
-    ap.add_argument("--robot", default="http://192.168.0.25", help="Valetudo base URL or 'mock'")
-    ap.add_argument("--host", default="127.0.0.1")
-    ap.add_argument("--port", type=int, default=8780)
+    ap.add_argument("--robot", default=env("ROBOROCK_URL"), help="Valetudo base URL or 'mock' (env ROBOROCK_URL)")
+    ap.add_argument("--host", default=env("ROBOROCK_PANEL_HOST", "127.0.0.1"))
+    ap.add_argument("--port", type=int, default=int(env("ROBOROCK_PANEL_PORT", "8780")))
     ap.add_argument("--interval", type=float, default=1.0, help="status/map poll interval [s]")
-    ap.add_argument("--ssh-key", default=str(Path.home() / ".ssh" / "roborock"), help="key for the tap")
-    ap.add_argument("--no-tap", action="store_true", help="don't read lidar/sensors/pose over SSH")
+    ap.add_argument("--ssh-key", default=env("ROBOROCK_SSH_KEY", str(Path.home() / ".ssh" / "roborock")),
+                    help="key for the tap (env ROBOROCK_SSH_KEY)")
+    ap.add_argument("--no-tap", action="store_true", default=env("ROBOROCK_TAP", "1") == "0",
+                    help="don't read lidar/sensors/pose over SSH (env ROBOROCK_TAP=0)")
     args = ap.parse_args()
+    if not args.robot:
+        ap.error("set the robot address: ROBOROCK_URL in .env (copy .env.example) or --robot http://<robot-ip>")
+    args.ssh_key = os.path.expanduser(args.ssh_key)
 
     FETCH = make_fetch(args.robot)
     BASE = None if args.robot == "mock" else args.robot.rstrip("/")

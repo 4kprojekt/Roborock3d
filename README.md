@@ -28,10 +28,33 @@ Do not skip the full factory reset. Keep your SSH key: you need it in step 3.
 
 Check: `http://<robot-ip>` opens the Valetudo UI.
 
+## Configuration
+
+Copy `.env.example` to `.env` and set at least `ROBOROCK_URL`. `.env` is ignored by git.
+Environment variables and command-line flags override `.env`.
+
+| Setting | Required | Default | What it is |
+| :--- | :--- | :--- | :--- |
+| `ROBOROCK_URL` / `--robot` | **yes** | none | Valetudo address, e.g. `http://192.168.1.50`, or `mock` |
+| `ROBOROCK_SSH_KEY` / `--ssh-key` | for step 3 | `~/.ssh/roborock` | SSH private key for `root` on the robot |
+| `ROBOROCK_TAP` / `--no-tap` | no | `1` | `0` = do not connect over SSH (no live lidar/sensors) |
+| `ROBOROCK_PANEL_HOST` / `--host` | no | `127.0.0.1` | Panel listen address. The panel has **no login**, do not expose it. |
+| `ROBOROCK_PANEL_PORT` / `--port` | no | `8780` | Panel port |
+| `ROBOROCK_PANEL` | no | `http://127.0.0.1:8780` | Used by `mcp_server.py` to reach the panel (set in the MCP client config) |
+
+Fixed values you may need to change in code for another model or firmware:
+
+- `server.py` `tap_reader`: SSH user `root`, relay path `/mnt/data/lidartap_relay`.
+- `lds.py`: `LDS_ANGLE_OFFSET_DEG = 10`, `POSE_LAG_MS = 200` (lidar mounting angle and pose delay; if walls
+  in the live scan look rotated or smeared while turning, tune these).
+- `sensors.py`: thresholds for carpet, brush jam, drive load and tilt are heuristics measured on one S5.
+- `static/scene.js`: `HEADING_OFFSET_DEG = -90`.
+
 ## Step 2: Run the panel (no changes to the robot)
 
 ```sh
-python server.py --robot http://<robot-ip>
+cp .env.example .env     # then edit ROBOROCK_URL (and ROBOROCK_TAP=0 until step 3 is done)
+python server.py
 # no robot at hand: python server.py --robot mock
 ```
 
@@ -68,10 +91,7 @@ Valetudo does not expose raw lidar or sensor data, so a small library copies it 
    rr_loader,LD_PRELOAD=/mnt/data/lidartap.so setsid rr_loader -d&,1,5,1
    ```
    Compare with the original line first: your firmware may differ.
-4. Reboot the robot, then start the panel with the key:
-   ```sh
-   python server.py --robot http://<robot-ip> --ssh-key <key>
-   ```
+4. Reboot the robot. In `.env` set `ROBOROCK_SSH_KEY=<key>` and `ROBOROCK_TAP=1`, then restart `python server.py`.
    Check: the lidar scan appears on the map and "lidar age" in the status is under a second.
 
 **Undo:**
@@ -106,7 +126,7 @@ voice pack) need explicit confirmation. Updater and Valetudo settings are blocke
 - The 3D view loads three.js from the jsDelivr CDN, so your browser contacts that CDN.
 - **If you use the MCP server with a cloud AI** (Claude, ChatGPT, ...), the tool results (map coordinates,
   room names, status, events, Wi-Fi names) are sent to that AI provider. Use a local model if that matters to you.
-- Never commit your SSH private key. `.gitignore` excludes `roborock`, `*.key` and `data/`.
+- Never commit your SSH private key. `.gitignore` excludes `.env`, `roborock`, `*.key` and `data/`.
 
 ## Files
 
