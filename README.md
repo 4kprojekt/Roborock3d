@@ -113,6 +113,72 @@ python mcp_server.py --test     # self-check
 The agent can move a real robot. Risky Valetudo calls (map reset, Wi-Fi change, persistent map, quirks,
 voice pack) need explicit confirmation. Updater and Valetudo settings are blocked.
 
+### MCP examples
+
+Just ask in plain language. The agent picks the tools. Examples that were used on a real S5:
+
+| You say | What the agent does |
+| :--- | :--- |
+| "Why did the vacuum stop?" | `robot_status`, `events`, `sessions`: battery curve, errors, last position |
+| "Start cleaning, but watch out for cables" | `hotspots` to find where it got stuck before, asks you, then `restrictions add_zone` and `robot_control start` |
+| "Check the cleaning" | `sessions` + `events`: area covered, where it bumped, why it returned early |
+| "Show me the problem areas and suggest zones to block" | `hotspots`: spots with many bumps, brush jams or cliff triggers, each with a ready no-go zone |
+| "Clean only the kitchen twice" | `list_rooms`, `clean_rooms {ids:["3"], iterations:2}` |
+| "Drive 50 cm forward, turn left and look around" | `drive` or `run_program` with `forward`, `turn`, `look` steps |
+| "Run program serwis_mapy" | `run_program {name:"serwis_mapy"}`, then `job_status` for per-step results |
+
+A step program (`run_program` with `steps`, or a JSON file in `programs/`):
+
+```json
+[
+  {"goto": [2429, 3004]},
+  {"look": true},
+  {"turn": 90},
+  {"look": true},
+  {"clean_zone": [2300, 2900, 2500, 3100]},
+  {"wait_done": true},
+  {"home": true}
+]
+```
+
+`run_program {help:true}` lists all step types. `job_status` returns, per step: result, distance left,
+pose, and sensor events (bumper, brush jam, ...) that happened during that step.
+
+## Let Claude (or another AI agent) do the setup
+
+With [Claude Code](https://claude.com/claude-code) running in this folder, you can hand over almost everything
+after a factory reset. Claude runs the commands, reads the output and fixes problems. **You** do the physical
+steps (buttons, Wi-Fi switching) and approve each download, robot change and reboot.
+
+Read the warning at the top first. Flashing firmware can brick the robot.
+
+1. **Factory reset the robot** (you): on the S5 hold Dock, press Reset with a pin, keep holding Dock about 5 s
+   until the voice prompt. A plain reset is not enough: the firmware upload then silently fails.
+2. **Get the rooted firmware** (you): build it on [Dustbuilder](https://builder.dontvacuum.me) for your model
+   with your SSH public key, as the [Valetudo guide](https://valetudo.cloud/pages/installation/roborock.html) says.
+   Claude can generate the key pair for you first (step a below).
+3. **Connect the PC to the robot's Wi-Fi** (`roborock-vacuum-...`, robot at `192.168.8.1`), unplug LAN cable.
+4. **Give Claude a prompt**, for example:
+
+   ```text
+   Read README.md. My Roborock S5 was just factory reset and my PC is on its Wi-Fi.
+   a) If there is no SSH key yet, create ~/.ssh/roborock (ed25519) and show me the public key for Dustbuilder.
+   b) Install the firmware file <path to .pkg> with valetudo-helper-miioota (install-firmware).
+      Temporarily allow it through the firewall and tell me exactly what you changed, then revert it.
+   c) When Valetudo answers on 192.168.8.1, set Wi-Fi to my home network. I will type the password myself
+      in the Valetudo UI, do not ask me for it.
+   d) Find the robot's new IP on my LAN, write .env from .env.example, start server.py and check /local/state.
+   e) Build the tap with tap/build.sh, copy it to /mnt/data, back up ProcessList.conf, add the LD_PRELOAD line,
+      reboot, and confirm the live lidar works. Ask me before each change on the robot.
+   f) Register mcp_server.py as MCP server "roborock" and run its self-check.
+   ```
+
+5. **After the first run**, ask for a map scan:
+   `Run explore, then show hotspots and suggest no-go zones. Do not apply zones without asking me.`
+
+Things Claude should not do for you: enter your Wi-Fi password or any other password, register accounts,
+or accept terms on websites. Type those yourself.
+
 ## How data is used
 
 - **Everything stays on your machine.** The panel talks only to the robot on your LAN. No telemetry,
