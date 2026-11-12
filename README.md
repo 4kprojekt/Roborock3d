@@ -4,11 +4,13 @@ A local control panel and AI (MCP) bridge for a Roborock vacuum running [Valetud
 2D/3D map, live raw lidar, MCU sensor data (bumper, cliff, wheel and brush current), cleaning history,
 Wi-Fi heatmap, "problem spots" where the robot keeps bumping into things, no-go zones and scripted routes.
 
-![2D map with the Wi-Fi heatmap, route and problem spots](docs/panel_2d.png)
+![3D view: Wi-Fi heatmap on the floor, furniture, route and problem spots](docs/panel_3d.png)
 
-| First-person view (FPV) | Run history and replay |
+| 2D map | First-person view (FPV) |
 | :---: | :---: |
-| ![FPV view with the Wi-Fi heatmap on the floor](docs/panel_fpv.png) | ![Run history, replay chart and Wi-Fi by room](docs/panel_history.png) |
+| ![2D map with the Wi-Fi heatmap, route and problem spots](docs/panel_2d.png) | ![FPV view from the robot with the Wi-Fi heatmap on the floor](docs/panel_fpv.png) |
+
+![Run history, replay chart and Wi-Fi by room](docs/panel_history.png)
 
 ![Manual control, step programs, events and problem spots](docs/panel_control.png)
 

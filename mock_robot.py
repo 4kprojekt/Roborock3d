@@ -37,11 +37,16 @@ def signal_at(x, y):
     return round(-30 - 30 * math.log10(1 + d / 50) + random.uniform(-2, 2))
 
 
+FURNITURE = [(30, 3, 34, 9), (82, 38, 18, 14), (4, 62, 12, 14), (126, 72, 48, 6), (58, 54, 3, 3), (68, 54, 3, 3)]  # x, y, w, h [px]
+
+
 def build_map():
     inside = set().union(*(room_pixels(*r[2:]) for r in ROOMS))
     walls = {(x + dx, y + dy) for x, y in inside for dx in (-1, 0, 1) for dy in (-1, 0, 1)} - inside
+    furniture = set().union(*(room_pixels(*f) for f in FURNITURE))   # sofa, table, shelf, counter, chair legs
+    walls |= furniture
     layers = [{"__class": "MapLayer", "type": "segment", "pixels": [],
-               "compressedPixels": compress(room_pixels(*r[2:])),
+               "compressedPixels": compress(room_pixels(*r[2:]) - furniture),
                "metaData": {"segmentId": r[0], "name": r[1], "active": False, "area": r[4] * r[5] * PS * PS}}
               for r in ROOMS]
     layers.append({"__class": "MapLayer", "type": "wall", "pixels": [], "compressedPixels": compress(walls),
