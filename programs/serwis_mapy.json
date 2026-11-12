@@ -1,0 +1,203 @@
+{
+ "title": "Serwis: inspekcja miejsc problemowych + skan mieszkania",
+ "description": "Objeżdża 6 miejsc problemowych (stan z 2026-11-10): przy każdym pomiar lidarem w 4 kierunkach (obrót co 90°), potem pełny skan mieszkania (aktualizacja mapy, drzwi, przeszkód) i powrót na stację. Bez sprzątania. Ok. 25-35 min - uruchamiaj przy pełnej baterii.",
+ "spots": [
+  {
+   "name": "#2 próg/listwa (31×, 3 przechyły)",
+   "x": 2429,
+   "y": 3004
+  },
+  {
+   "name": "#1 wejście do wnęki (51×)",
+   "x": 2173,
+   "y": 3058
+  },
+  {
+   "name": "#12 przeszkoda poza mapą (4×)",
+   "x": 2171,
+   "y": 2902
+  },
+  {
+   "name": "#7 przeszkoda poza mapą (6×)",
+   "x": 2200,
+   "y": 2824
+  },
+  {
+   "name": "#3 przeszkoda poza mapą (9×)",
+   "x": 2007,
+   "y": 2842
+  },
+  {
+   "name": "#4 łazienka: przechył, szczotka, krawędź (10×)",
+   "x": 2127,
+   "y": 2552
+  }
+ ],
+ "steps": [
+  {
+   "goto": [
+    2429,
+    3004
+   ]
+  },
+  {
+   "look": true
+  },
+  {
+   "turn": 90
+  },
+  {
+   "look": true
+  },
+  {
+   "turn": 90
+  },
+  {
+   "look": true
+  },
+  {
+   "turn": 90
+  },
+  {
+   "look": true
+  },
+  {
+   "goto": [
+    2173,
+    3058
+   ]
+  },
+  {
+   "look": true
+  },
+  {
+   "turn": 90
+  },
+  {
+   "look": true
+  },
+  {
+   "turn": 90
+  },
+  {
+   "look": true
+  },
+  {
+   "turn": 90
+  },
+  {
+   "look": true
+  },
+  {
+   "goto": [
+    2171,
+    2902
+   ]
+  },
+  {
+   "look": true
+  },
+  {
+   "turn": 90
+  },
+  {
+   "look": true
+  },
+  {
+   "turn": 90
+  },
+  {
+   "look": true
+  },
+  {
+   "turn": 90
+  },
+  {
+   "look": true
+  },
+  {
+   "goto": [
+    2200,
+    2824
+   ]
+  },
+  {
+   "look": true
+  },
+  {
+   "turn": 90
+  },
+  {
+   "look": true
+  },
+  {
+   "turn": 90
+  },
+  {
+   "look": true
+  },
+  {
+   "turn": 90
+  },
+  {
+   "look": true
+  },
+  {
+   "goto": [
+    2007,
+    2842
+   ]
+  },
+  {
+   "look": true
+  },
+  {
+   "turn": 90
+  },
+  {
+   "look": true
+  },
+  {
+   "turn": 90
+  },
+  {
+   "look": true
+  },
+  {
+   "turn": 90
+  },
+  {
+   "look": true
+  },
+  {
+   "goto": [
+    2127,
+    2552
+   ]
+  },
+  {
+   "look": true
+  },
+  {
+   "turn": 90
+  },
+  {
+   "look": true
+  },
+  {
+   "turn": 90
+  },
+  {
+   "look": true
+  },
+  {
+   "turn": 90
+  },
+  {
+   "look": true
+  },
+  {
+   "explore": true
+  }
+ ]
+}

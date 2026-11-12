@@ -1,0 +1,906 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<title>Panel sterowania odkurzaczem</title>
+<script src="./vendor/react.js"></script>
+<script src="./vendor/react-dom.js"></script>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;border-radius:0}
+body{margin:0;background:#07090B}
+a{color:#C8FF3D}a:hover{color:#E4FF9A}
+button{font:inherit;color:inherit;cursor:pointer;border-radius:0;margin:0}
+button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace}
+.panel{position:relative;background:#0D1115;border:1px solid #1D242C}
+.panel::before{content:"";position:absolute;top:-1px;left:-1px;width:12px;height:12px;border-top:2px solid var(--acc);border-left:2px solid var(--acc);pointer-events:none}
+.panel::after{content:"";position:absolute;bottom:-1px;right:-1px;width:12px;height:12px;border-bottom:2px solid var(--acc);border-right:2px solid var(--acc);pointer-events:none}
+.chip{background:transparent;border:1px solid #2A333D;color:#A3AEB9;padding:0 12px;min-height:36px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;display:inline-flex;align-items:center;gap:8px;transition:background .2s,color .2s,border-color .2s;font-family:'JetBrains Mono',monospace}
+.chip:hover{border-color:#55616E;color:#E6EBF0}
+.chip.on{background:var(--acc);border-color:var(--acc);color:#0A0D10}
+.chip .sq{width:8px;height:8px;background:currentColor;flex:none}
+.seg{flex:1 1 0;min-height:44px;background:#11161B;border:1px solid #232B34;color:#A3AEB9;font-size:12px;letter-spacing:.06em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;transition:background .2s,color .2s}
+.seg:hover{color:#E6EBF0;background:#161D24}
+.seg.on{background:var(--acc);color:#0A0D10;border-color:var(--acc)}
+.tgl{width:46px;height:26px;border:1px solid #2A333D;background:#141A20;position:relative;padding:0;flex:none;transition:border-color .25s}
+.tgl .knob{position:absolute;top:4px;left:4px;width:16px;height:16px;background:#5B6672;transition:transform .3s cubic-bezier(.2,.8,.2,1),background .3s}
+.tgl.on{border-color:var(--acc)}
+.tgl.on .knob{transform:translateX(20px);background:var(--acc)}
+.btn{min-height:44px;padding:0 18px;border:1px solid #2A333D;background:#11161B;color:#E6EBF0;font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;display:inline-flex;align-items:center;gap:10px;transition:background .2s,border-color .2s}
+.btn:hover{border-color:#55616E;background:#161D24}
+.btn.primary{background:var(--acc);border-color:var(--acc);color:#0A0D10;font-weight:700}
+.btn.primary:hover{filter:brightness(1.08)}
+.scene{perspective:1700px;perspective-origin:50% 35%}
+.plane{position:absolute;left:50%;top:50%;width:600px;height:375px;margin:-187px 0 0 -300px;transform-style:preserve-3d;transition:transform 1.1s cubic-bezier(.2,.8,.2,1)}
+.v-3d{transform:rotateX(56deg) rotateZ(-34deg) scale(1.05)}
+.v-iso{transform:rotateX(62deg) rotateZ(-45deg) scale(.95)}
+.v-2d{transform:rotateX(0deg) rotateZ(0deg) scale(1.15)}
+.v-orbit{animation:orbit 40s linear infinite}
+@keyframes orbit{from{transform:rotateX(56deg) rotateZ(0deg) scale(1.05)}to{transform:rotateX(56deg) rotateZ(-360deg) scale(1.05)}}
+.layer{position:absolute;left:0;top:0;width:600px;height:375px;transform-style:preserve-3d}
+.layer.off{display:none}
+.layer sc-for,.layer sc-if{display:block;position:absolute;left:0;top:0;width:600px;height:375px;transform-style:preserve-3d}
+.floor{background-color:#121820;background-image:linear-gradient(#1B232C 1px,transparent 1px),linear-gradient(90deg,#1B232C 1px,transparent 1px);background-size:25px 25px;border:1px solid #2A333D}
+.wall{position:absolute;transform-origin:0 0;background:#BFC8D0;border-top:2px solid #F4F7F9;animation:rise 1.4s cubic-bezier(.2,.8,.2,1) both}
+.obst{position:absolute;transform-origin:0 0;background:#56626E;border-top:1px solid #8B96A3;animation:rise 1.4s cubic-bezier(.2,.8,.2,1) both}
+.otop{position:absolute;background:#3D4752;border:1px solid #6B7682}
+@keyframes rise{from{height:0}}
+.cell{position:absolute;width:25px;height:25px;animation:fadein .9s ease both}
+@keyframes fadein{from{opacity:0}}
+.trace{animation:draw 46s linear infinite}
+@keyframes draw{to{stroke-dashoffset:0}}
+.drive{position:absolute;left:0;top:0;width:22px;height:22px;offset-rotate:auto;offset-anchor:center;animation:drive 46s linear infinite}
+@keyframes drive{from{offset-distance:0%}to{offset-distance:100%}}
+.paused .trace,.paused .drive,.paused .sweep,.paused .scanline,.paused .pulse{animation-play-state:paused}
+.pulse{animation:pulse 1.8s ease-out infinite}
+@keyframes pulse{from{transform:scale(1);opacity:.9}to{transform:scale(3.2);opacity:0}}
+.blink{animation:blink 1.1s steps(2) infinite}
+@keyframes blink{50%{opacity:.2}}
+.sweep{animation:spin 2.6s linear infinite;transform-origin:130px 130px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.scanline{position:absolute;left:0;top:0;width:600px;height:2px;background:#38E1F0;box-shadow:0 0 12px #38E1F0;animation:scan 6s linear infinite}
+@keyframes scan{from{transform:translateZ(4px) translateY(0)}to{transform:translateZ(4px) translateY(373px)}}
+.bar{animation:grow 1s cubic-bezier(.2,.8,.2,1) both;transform-origin:bottom}
+@keyframes grow{from{transform:scaleY(0)}}
+.hbar{animation:hgrow 1.1s cubic-bezier(.2,.8,.2,1) both;transform-origin:left}
+@keyframes hgrow{from{transform:scaleX(0)}}
+.bseg{flex:1 1 0;height:30px;background:#1A2129}
+.bseg.on{background:var(--acc)}
+.bseg.last{background:var(--acc);animation:blink 1.1s steps(2) infinite}
+.row{transition:background .15s}
+.row:hover{background:#121920}
+.lbl{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#8B96A3}
+.ttl{font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:#E6EBF0;margin:0}
+input[type=range]{accent-color:var(--acc)}
+.fadeup{animation:fadeup .7s cubic-bezier(.2,.8,.2,1) both}
+@keyframes fadeup{from{opacity:0;transform:translateY(12px)}}
+@media (prefers-reduced-motion: reduce){.v-orbit,.scanline,.sweep,.pulse,.blink,.bseg.last{animation:none}}
+</style>
+</helmet>
+
+<div style="--acc: {{accent}}; min-height: 100vh; background: #07090B; color: #E6EBF0; font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 14px">
+
+<!-- ═════════ TOP BAR ═════════ -->
+<header style="display: flex; flex-wrap: wrap; align-items: center; gap: 16px 28px; padding: 14px 24px; border-bottom: 1px solid #1D242C; background: #0A0D10; position: sticky; top: 0; z-index: 20">
+  <div style="display: flex; align-items: center; gap: 14px">
+    <div style="width: 36px; height: 36px; background: var(--acc); display: grid; place-items: center">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#0A0D10" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="14" height="14"></rect><rect x="7" y="7" width="6" height="6"></rect><path d="M10 3V1"></path></svg>
+    </div>
+    <div style="display: flex; flex-direction: column">
+      <span style="font-weight: 700; font-size: 18px; letter-spacing: .02em">Roborock S5</span>
+      <span class="mono" style="font-size: 11px; color: #8B96A3; letter-spacing: .08em">FW 3.5.8_004 · 192.168.0.25</span>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-wrap: wrap; gap: 0; border: 1px solid #1D242C">
+    <div style="padding: 8px 16px; border-right: 1px solid #1D242C; display: flex; flex-direction: column; gap: 2px">
+      <span class="lbl">Stan</span>
+      <span class="mono" style="font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 8px"><span class="{{statusDotCls}}" style="width: 8px; height: 8px; background: var(--acc)"></span>{{statusLabel}}</span>
+    </div>
+    <div style="padding: 8px 16px; border-right: 1px solid #1D242C; display: flex; flex-direction: column; gap: 2px">
+      <span class="lbl">Bateria</span>
+      <span class="mono" style="font-size: 14px; font-weight: 700">78%</span>
+    </div>
+    <div style="padding: 8px 16px; border-right: 1px solid #1D242C; display: flex; flex-direction: column; gap: 2px">
+      <span class="lbl">Wi-Fi</span>
+      <span class="mono" style="font-size: 14px; font-weight: 700; color: #F2D23C">−70 dBm</span>
+    </div>
+    <div style="padding: 8px 16px; border-right: 1px solid #1D242C; display: flex; flex-direction: column; gap: 2px">
+      <span class="lbl">Czas</span>
+      <span class="mono" style="font-size: 14px; font-weight: 700">18:42</span>
+    </div>
+    <div style="padding: 8px 16px; display: flex; flex-direction: column; gap: 2px">
+      <span class="lbl">Posprzątano</span>
+      <span class="mono" style="font-size: 14px; font-weight: 700">26.3 m²</span>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto">
+    <button class="btn primary" onClick="{{toggleRun}}">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor" aria-hidden="true"><path d="{{runIcon}}"></path></svg>
+      {{runLabel}}
+    </button>
+    <button class="btn">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M2 12V6l5-4 5 4v6H2z"></path><path d="M5.5 12V8.5h3V12"></path></svg>
+      Do stacji
+    </button>
+    <button class="btn">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="2" y="2" width="10" height="10"></rect><path d="M7 4.5v5M4.5 7h5"></path></svg>
+      Punktowe
+    </button>
+    <button class="btn" aria-label="Znajdź robota">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M3 5v4h2l3 3V2L5 5H3z"></path><path d="M10.5 4.5c1 1.4 1 3.6 0 5"></path></svg>
+    </button>
+  </div>
+</header>
+
+<main style="max-width: 1480px; margin: 0 auto; padding: 20px; display: flex; flex-direction: column; gap: 20px">
+
+<!-- ═════════ ROW 1: MAP + RIGHT COLUMN ═════════ -->
+<div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: stretch">
+
+  <!-- MAP 3D -->
+  <section class="panel fadeup" style="flex: 999 1 640px; min-width: 0; display: flex; flex-direction: column">
+    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; padding: 14px 18px; border-bottom: 1px solid #1D242C">
+      <h2 class="ttl">Mapa 3D · warstwy</h2>
+      <div role="group" aria-label="Widok" style="display: flex; gap: 0">
+        <sc-for list="{{viewOpts}}" as="v" hint-placeholder-count="4">
+          <button class="chip {{v.cls}}" aria-pressed="{{v.pressed}}" onClick="{{v.pick}}" style="margin-left: -1px">{{v.label}}</button>
+        </sc-for>
+      </div>
+      <label style="display: flex; align-items: center; gap: 10px; margin-left: auto">
+        <span class="lbl">Ściany</span>
+        <input type="range" min="8" max="80" value="{{wallH}}" onChange="{{setWallH}}" style="width: 140px">
+        <span class="mono" style="font-size: 12px; width: 56px">{{wallHcm}} cm</span>
+      </label>
+    </div>
+
+    <div class="{{sceneCls}}" style="position: relative; height: 620px; overflow: hidden; background: #090C0F">
+      <!-- 3D plane -->
+      <div class="plane {{viewCls}}">
+        <div class="layer floor"></div>
+
+        <div class="layer {{lyr.wifi}}" style="transform: translateZ(1px)">
+          <sc-for list="{{cells}}" as="c" hint-placeholder-count="0">
+            <div class="cell" style="left: {{c.x}}px; top: {{c.y}}px; background: {{c.color}}; animation-delay: {{c.delay}}ms"></div>
+          </sc-for>
+        </div>
+
+        <div class="layer {{lyr.labels}}" style="transform: translateZ(2px)">
+          <sc-for list="{{rooms}}" as="r" hint-placeholder-count="0">
+            <div class="mono" style="position: absolute; left: {{r.lx}}px; top: {{r.ly}}px; transform: translate(-50%, -50%); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: #E6EBF0; text-align: center; white-space: nowrap; background: #0A0D10CC; padding: 3px 6px; border: 1px solid #2A333D">{{r.name}}<br><span style="color: #8B96A3">{{r.area}} m²</span></div>
+          </sc-for>
+        </div>
+
+        <div class="layer {{lyr.path}}" style="transform: translateZ(3px)">
+          <svg width="600" height="375" viewBox="0 0 600 375" style="position: absolute; left: 0; top: 0; overflow: visible" aria-hidden="true">
+            <path d="{{pathD}}" fill="none" stroke="#C8FF3D" stroke-opacity=".18" stroke-width="10" stroke-linejoin="miter"></path>
+            <path class="trace" d="{{pathD}}" fill="none" stroke-width="2" stroke-linejoin="miter" style="stroke: var(--acc); stroke-dasharray: {{pathLen}}; stroke-dashoffset: {{pathLen}}"></path>
+          </svg>
+        </div>
+
+        <div class="layer {{lyr.walls}}">
+          <sc-for list="{{walls}}" as="w" hint-placeholder-count="0">
+            <div class="wall" style="left: {{w.x}}px; top: {{w.y}}px; width: {{w.len}}px; height: {{wallH}}px; transform: rotateZ({{w.a}}deg) rotateX(90deg); animation-delay: {{w.delay}}ms"></div>
+          </sc-for>
+        </div>
+
+        <div class="layer {{lyr.obst}}">
+          <sc-for list="{{obstSides}}" as="w" hint-placeholder-count="0">
+            <div class="obst" style="left: {{w.x}}px; top: {{w.y}}px; width: {{w.len}}px; height: 14px; transform: rotateZ({{w.a}}deg) rotateX(90deg); animation-delay: {{w.delay}}ms"></div>
+          </sc-for>
+          <sc-for list="{{obstTops}}" as="o" hint-placeholder-count="0">
+            <div class="otop" style="left: {{o.x}}px; top: {{o.y}}px; width: {{o.w}}px; height: {{o.h}}px; transform: translateZ(14px)"></div>
+          </sc-for>
+        </div>
+
+        <div class="layer {{lyr.lidar}}">
+          <sc-for list="{{lidarLayers}}" as="L" hint-placeholder-count="0">
+            <svg width="600" height="375" viewBox="0 0 600 375" style="position: absolute; left: 0; top: 0; overflow: visible; transform: translateZ({{L.z}}px); opacity: {{L.op}}" aria-hidden="true">
+              <path d="{{lidarD}}" fill="none" stroke="#38E1F0" stroke-width="2.4" stroke-linecap="square"></path>
+            </svg>
+          </sc-for>
+          <div class="scanline"></div>
+        </div>
+
+        <!-- dock -->
+        <div style="position: absolute; left: 584px; top: 176px; width: 14px; height: 28px; background: #2A333D; border: 1px solid var(--acc); transform: translateZ(4px)"></div>
+
+        <!-- robot -->
+        <div class="drive" style="offset-path: path('{{pathD}}'); transform: translateZ(7px)">
+          <div class="pulse" style="position: absolute; inset: 4px; border: 2px solid var(--acc)"></div>
+          <div style="position: absolute; inset: 0; background: var(--acc); clip-path: polygon(30% 0, 70% 0, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0 70%, 0 30%)"></div>
+          <div style="position: absolute; left: 7px; top: 7px; width: 8px; height: 8px; background: #0A0D10"></div>
+          <div style="position: absolute; right: 2px; top: 9px; width: 4px; height: 4px; background: #0A0D10"></div>
+        </div>
+      </div>
+
+      <!-- HUD: layers -->
+      <div style="position: absolute; left: 16px; top: 16px; display: flex; flex-direction: column; gap: 6px; background: #0A0D10E6; border: 1px solid #1D242C; padding: 12px; width: 196px">
+        <span class="lbl" style="margin-bottom: 4px">Warstwy</span>
+        <sc-for list="{{layerItems}}" as="l" hint-placeholder-count="6">
+          <button class="chip {{l.cls}}" aria-pressed="{{l.pressed}}" onClick="{{l.toggle}}" style="justify-content: flex-start; width: 100%"><span class="sq"></span>{{l.label}}</button>
+        </sc-for>
+      </div>
+
+      <!-- HUD: coords -->
+      <div class="mono" style="position: absolute; right: 16px; top: 16px; text-align: right; font-size: 11px; line-height: 1.7; color: #A3AEB9; background: #0A0D10E6; border: 1px solid #1D242C; padding: 10px 12px">
+        <div>POS <span style="color: #E6EBF0">2558, 2581 cm</span></div>
+        <div>KĄT <span style="color: #E6EBF0">182°</span></div>
+        <div>V <span style="color: #E6EBF0">0.28 m/s</span></div>
+        <div>LDS <span style="color: #38E1F0">300 RPM</span></div>
+      </div>
+
+      <!-- HUD: legend -->
+      <div style="position: absolute; left: 16px; bottom: 16px; background: #0A0D10E6; border: 1px solid #1D242C; padding: 12px; width: 260px; display: flex; flex-direction: column; gap: 8px">
+        <span class="lbl">Zasięg Wi-Fi · dBm</span>
+        <div style="height: 10px; background: linear-gradient(90deg, #D6334A, #F08A24, #F2D23C, #7BE04A)"></div>
+        <div class="mono" style="display: flex; justify-content: space-between; font-size: 10px; color: #A3AEB9"><span>−90</span><span>−78</span><span>−66</span><span>−52</span></div>
+        <div style="display: flex; gap: 14px; margin-top: 4px">
+          <span class="mono" style="font-size: 10px; color: #A3AEB9; display: flex; align-items: center; gap: 6px"><span style="width: 8px; height: 8px; background: #38E1F0"></span>LIDAR</span>
+          <span class="mono" style="font-size: 10px; color: #A3AEB9; display: flex; align-items: center; gap: 6px"><span style="width: 12px; height: 2px; background: var(--acc)"></span>TRASA</span>
+          <span class="mono" style="font-size: 10px; color: #A3AEB9; display: flex; align-items: center; gap: 6px"><span style="width: 8px; height: 8px; background: #56626E"></span>MEBLE</span>
+        </div>
+      </div>
+
+      <!-- HUD: stats -->
+      <div class="mono" style="position: absolute; right: 16px; bottom: 16px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; background: #0A0D10E6; border: 1px solid #1D242C; font-size: 11px">
+        <div style="padding: 8px 12px; border-right: 1px solid #1D242C; border-bottom: 1px solid #1D242C"><div class="lbl" style="font-size: 9px">Pomiary Wi-Fi</div><div style="font-size: 15px; font-weight: 700">1572</div></div>
+        <div style="padding: 8px 12px; border-bottom: 1px solid #1D242C"><div class="lbl" style="font-size: 9px">Punkty lidar</div><div style="font-size: 15px; font-weight: 700; color: #38E1F0">{{lidarCount}}</div></div>
+        <div style="padding: 8px 12px; border-right: 1px solid #1D242C"><div class="lbl" style="font-size: 9px">Trasa</div><div style="font-size: 15px; font-weight: 700">{{pathM}} m</div></div>
+        <div style="padding: 8px 12px"><div class="lbl" style="font-size: 9px">Siatka</div><div style="font-size: 15px; font-weight: 700">0.5 m</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- RIGHT COLUMN -->
+  <div style="flex: 1 1 380px; min-width: 0; display: flex; flex-direction: column; gap: 20px">
+
+    <!-- telemetry -->
+    <section class="panel fadeup" style="padding: 18px; display: flex; flex-direction: column; gap: 16px; animation-delay: 120ms">
+      <div style="display: flex; justify-content: space-between; align-items: center">
+        <h2 class="ttl">Telemetria</h2>
+        <span class="mono" style="font-size: 11px; color: var(--acc); display: flex; align-items: center; gap: 6px"><span class="blink" style="width: 6px; height: 6px; background: var(--acc)"></span>LIVE</span>
+      </div>
+      <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 12px">
+        <div>
+          <div class="lbl">Bateria</div>
+          <div class="mono" style="font-size: 56px; font-weight: 700; line-height: 1; letter-spacing: -.03em">78<span style="font-size: 24px; color: #8B96A3">%</span></div>
+        </div>
+        <div class="mono" style="text-align: right; font-size: 12px; line-height: 1.7; color: #A3AEB9">
+          <div>pobór <span style="color: #E6EBF0">31.4 W</span></div>
+          <div>zostało <span style="color: #E6EBF0">~64 min</span></div>
+          <div>temp. <span style="color: #E6EBF0">34 °C</span></div>
+        </div>
+      </div>
+      <div style="display: flex; gap: 3px">
+        <sc-for list="{{batSegs}}" as="s" hint-placeholder-count="20">
+          <div class="bseg {{s.cls}}"></div>
+        </sc-for>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; border: 1px solid #1D242C">
+        <div style="padding: 12px; border-right: 1px solid #1D242C; border-bottom: 1px solid #1D242C">
+          <div class="lbl">Sygnał Wi-Fi</div>
+          <div style="display: flex; align-items: flex-end; gap: 10px; margin-top: 6px">
+            <div style="display: flex; align-items: flex-end; gap: 3px; height: 22px" aria-hidden="true">
+              <div style="width: 5px; height: 6px; background: #F2D23C"></div>
+              <div style="width: 5px; height: 11px; background: #F2D23C"></div>
+              <div style="width: 5px; height: 16px; background: #2A333D"></div>
+              <div style="width: 5px; height: 22px; background: #2A333D"></div>
+            </div>
+            <span class="mono" style="font-size: 18px; font-weight: 700">−70 dBm</span>
+          </div>
+        </div>
+        <div style="padding: 12px; border-bottom: 1px solid #1D242C">
+          <div class="lbl">SSID · pasmo</div>
+          <div class="mono" style="font-size: 14px; font-weight: 700; margin-top: 8px">MyWiFi · 2.4 GHz</div>
+        </div>
+        <div style="padding: 12px; border-right: 1px solid #1D242C">
+          <div class="lbl">Przepustowość</div>
+          <div class="mono" style="font-size: 14px; font-weight: 700; margin-top: 8px">150 Mbps ↑</div>
+        </div>
+        <div style="padding: 12px">
+          <div class="lbl">BSSID</div>
+          <div class="mono" style="font-size: 12px; font-weight: 700; margin-top: 8px">aa:bb:cc:dd:ee:ff</div>
+        </div>
+      </div>
+
+      <div>
+        <div style="display: flex; justify-content: space-between" class="mono"><span class="lbl">Postęp zadania</span><span style="font-size: 12px">26.3 / {{selArea}} m²</span></div>
+        <div style="height: 6px; background: #1A2129; margin-top: 8px"><div class="hbar" style="height: 6px; width: {{progressPct}}%; background: var(--acc)"></div></div>
+      </div>
+    </section>
+
+    <!-- cleaning params -->
+    <section class="panel fadeup" style="padding: 18px; display: flex; flex-direction: column; gap: 18px; flex: 1 1 auto; animation-delay: 220ms">
+      <h2 class="ttl">Parametry sprzątania</h2>
+
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <span class="lbl">Pomieszczenia</span>
+        <div style="display: flex; flex-wrap: wrap; gap: 6px">
+          <sc-for list="{{roomChips}}" as="r" hint-placeholder-count="6">
+            <button class="chip {{r.cls}}" aria-pressed="{{r.pressed}}" onClick="{{r.toggle}}">{{r.name}}</button>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <span class="lbl">Moc ssania</span>
+        <div role="group" aria-label="Moc ssania" style="display: flex; gap: 0">
+          <sc-for list="{{fanOpts}}" as="o" hint-placeholder-count="4">
+            <button class="seg {{o.cls}}" aria-pressed="{{o.pressed}}" onClick="{{o.pick}}" style="margin-left: -1px">{{o.label}}</button>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <span class="lbl">Przepływ wody (mop)</span>
+        <div role="group" aria-label="Przepływ wody" style="display: flex; gap: 0">
+          <sc-for list="{{waterOpts}}" as="o" hint-placeholder-count="4">
+            <button class="seg {{o.cls}}" aria-pressed="{{o.pressed}}" onClick="{{o.pick}}" style="margin-left: -1px">{{o.label}}</button>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <span class="lbl">Liczba przejść</span>
+        <div role="group" aria-label="Liczba przejść" style="display: flex; gap: 0">
+          <sc-for list="{{passOpts}}" as="o" hint-placeholder-count="3">
+            <button class="seg {{o.cls}}" aria-pressed="{{o.pressed}}" onClick="{{o.pick}}" style="margin-left: -1px">{{o.label}}</button>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; border-top: 1px solid #1D242C">
+        <sc-for list="{{optItems}}" as="t" hint-placeholder-count="4">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid #1D242C">
+            <div style="display: flex; flex-direction: column">
+              <span style="font-size: 14px">{{t.label}}</span>
+              <span class="mono" style="font-size: 11px; color: #8B96A3">{{t.hint}}</span>
+            </div>
+            <button class="tgl {{t.cls}}" aria-pressed="{{t.pressed}}" aria-label="{{t.label}}" onClick="{{t.toggle}}"><span class="knob"></span></button>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border: 1px solid #1D242C">
+        <div style="padding: 10px 12px; border-right: 1px solid #1D242C"><div class="lbl" style="font-size: 9px">Powierzchnia</div><div class="mono" style="font-size: 18px; font-weight: 700">{{selArea}} m²</div></div>
+        <div style="padding: 10px 12px; border-right: 1px solid #1D242C"><div class="lbl" style="font-size: 9px">Szac. czas</div><div class="mono" style="font-size: 18px; font-weight: 700">{{estMin}} min</div></div>
+        <div style="padding: 10px 12px"><div class="lbl" style="font-size: 9px">Szac. bateria</div><div class="mono" style="font-size: 18px; font-weight: 700; color: {{estBatColor}}">−{{estBat}}%</div></div>
+      </div>
+
+      <button class="btn primary" style="width: 100%; justify-content: center; min-height: 52px; font-size: 13px">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor" aria-hidden="true"><path d="M3 1.5l9 5.5-9 5.5z"></path></svg>
+        Uruchom sprzątanie zaznaczonych
+      </button>
+    </section>
+  </div>
+</div>
+
+<!-- ═════════ ROW 2: BATTERY / LIDAR / WIFI ROOMS ═════════ -->
+<div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: stretch">
+
+  <section class="panel fadeup" style="flex: 5 1 520px; min-width: 0; padding: 18px; display: flex; flex-direction: column; gap: 14px; animation-delay: 300ms">
+    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; justify-content: space-between">
+      <h2 class="ttl">Zużycie baterii</h2>
+      <div role="group" aria-label="Zakres wykresu" style="display: flex">
+        <sc-for list="{{chartOpts}}" as="o" hint-placeholder-count="2">
+          <button class="chip {{o.cls}}" aria-pressed="{{o.pressed}}" onClick="{{o.pick}}" style="margin-left: -1px">{{o.label}}</button>
+        </sc-for>
+      </div>
+    </div>
+
+    <sc-if value="{{showSession}}" hint-placeholder-val="{{ true }}">
+      <div>
+        <svg viewBox="0 0 600 220" style="width: 100%; height: auto; display: block" role="img" aria-label="Krzywe rozładowania baterii dla pięciu ostatnich sprzątań">
+          <g stroke="#1D242C" stroke-width="1">
+            <line x1="40" y1="10" x2="590" y2="10"></line>
+            <line x1="40" y1="61.4" x2="590" y2="61.4"></line>
+            <line x1="40" y1="112.9" x2="590" y2="112.9"></line>
+            <line x1="40" y1="164.3" x2="590" y2="164.3"></line>
+            <line x1="40" y1="190" x2="590" y2="190" stroke="#2A333D"></line>
+          </g>
+          <g font-family="JetBrains Mono, monospace" font-size="10" fill="#8B96A3">
+            <text x="32" y="14" text-anchor="end">100</text>
+            <text x="32" y="65" text-anchor="end">80</text>
+            <text x="32" y="117" text-anchor="end">60</text>
+            <text x="32" y="168" text-anchor="end">40</text>
+            <text x="40" y="206" text-anchor="middle">0</text>
+            <text x="150" y="206" text-anchor="middle">20</text>
+            <text x="260" y="206" text-anchor="middle">40</text>
+            <text x="370" y="206" text-anchor="middle">60</text>
+            <text x="480" y="206" text-anchor="middle">80</text>
+            <text x="590" y="206" text-anchor="end">100 min</text>
+          </g>
+          <polyline points="{{s1}}" fill="none" stroke="#3A4552" stroke-width="1.5"></polyline>
+          <polyline points="{{s2}}" fill="none" stroke="#3A4552" stroke-width="1.5"></polyline>
+          <polyline points="{{s3}}" fill="none" stroke="#F08A24" stroke-width="1.5"></polyline>
+          <polyline points="{{s4}}" fill="none" stroke="#3A4552" stroke-width="1.5"></polyline>
+          <polyline points="{{s0}}" fill="none" stroke-width="2.5" style="stroke: var(--acc)"></polyline>
+          <rect x="{{liveX}}" y="{{liveY}}" width="8" height="8" transform="translate(-4 -4)" style="fill: var(--acc)"></rect>
+        </svg>
+        <div class="mono" style="display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 11px; color: #A3AEB9; margin-top: 6px">
+          <span style="display: flex; align-items: center; gap: 6px"><span style="width: 14px; height: 3px; background: var(--acc)"></span>Dziś 07:02 · Turbo · w toku</span>
+          <span style="display: flex; align-items: center; gap: 6px"><span style="width: 14px; height: 3px; background: #F08A24"></span>6.11 · Max + mop · −61%</span>
+          <span style="display: flex; align-items: center; gap: 6px"><span style="width: 14px; height: 3px; background: #3A4552"></span>poprzednie sesje</span>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{showDaily}}" hint-placeholder-val="{{ false }}">
+      <div>
+        <div style="display: flex; align-items: flex-end; gap: 6px; height: 190px; border-bottom: 1px solid #2A333D; padding-top: 10px">
+          <sc-for list="{{daily}}" as="d" hint-placeholder-count="14">
+            <div style="flex: 1 1 0; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 4px">
+              <span class="mono" style="font-size: 10px; color: #A3AEB9">{{d.v}}</span>
+              <div class="bar" style="width: 100%; height: {{d.h}}%; background: {{d.color}}; animation-delay: {{d.delay}}ms"></div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display: flex; gap: 6px; margin-top: 6px">
+          <sc-for list="{{daily}}" as="d" hint-placeholder-count="14">
+            <span class="mono" style="flex: 1 1 0; text-align: center; font-size: 10px; color: #8B96A3">{{d.day}}</span>
+          </sc-for>
+        </div>
+        <div class="mono" style="font-size: 11px; color: #A3AEB9; margin-top: 10px">Energia na dzień [Wh] · 14 dni · łącznie <span style="color: #E6EBF0">{{dailySum}} Wh</span> · bateria 5200 mAh / 14.4 V</div>
+      </div>
+    </sc-if>
+
+    <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1px solid #1D242C">
+      <div style="padding: 10px 12px; border-right: 1px solid #1D242C"><div class="lbl" style="font-size: 9px">Cykle ładowania</div><div class="mono" style="font-size: 18px; font-weight: 700">412</div></div>
+      <div style="padding: 10px 12px; border-right: 1px solid #1D242C"><div class="lbl" style="font-size: 9px">Kondycja</div><div class="mono" style="font-size: 18px; font-weight: 700">91%</div></div>
+      <div style="padding: 10px 12px; border-right: 1px solid #1D242C"><div class="lbl" style="font-size: 9px">Śr. %/m²</div><div class="mono" style="font-size: 18px; font-weight: 700">0.55</div></div>
+      <div style="padding: 10px 12px"><div class="lbl" style="font-size: 9px">Ładowanie</div><div class="mono" style="font-size: 18px; font-weight: 700">~3h 10m</div></div>
+    </div>
+  </section>
+
+  <section class="panel fadeup" style="flex: 3 1 300px; min-width: 0; padding: 18px; display: flex; flex-direction: column; gap: 12px; animation-delay: 380ms">
+    <div style="display: flex; justify-content: space-between; align-items: center">
+      <h2 class="ttl">Skan lidar 360°</h2>
+      <span class="mono" style="font-size: 11px; color: #38E1F0">{{scanCount}} pkt</span>
+    </div>
+    <div class="{{sceneCls}}" style="display: grid; place-items: center">
+      <svg viewBox="0 0 260 260" style="width: 100%; max-width: 320px; height: auto" role="img" aria-label="Polarny wykres skanu lidar wokół robota">
+        <g fill="none" stroke="#1D242C">
+          <rect x="20" y="20" width="220" height="220"></rect>
+          <circle cx="130" cy="130" r="27.5"></circle>
+          <circle cx="130" cy="130" r="55"></circle>
+          <circle cx="130" cy="130" r="82.5"></circle>
+          <circle cx="130" cy="130" r="110"></circle>
+          <line x1="130" y1="14" x2="130" y2="246"></line>
+          <line x1="14" y1="130" x2="246" y2="130"></line>
+        </g>
+        <g font-family="JetBrains Mono, monospace" font-size="8" fill="#8B96A3">
+          <text x="133" y="100">2m</text><text x="133" y="73">4m</text><text x="133" y="46">6m</text><text x="133" y="19">8m</text>
+        </g>
+        <path d="{{scanFill}}" fill="#38E1F0" fill-opacity=".08" stroke="none"></path>
+        <g class="sweep">
+          <path d="M130 130 L130 20 A110 110 0 0 1 165 25.7 Z" fill="#38E1F0" fill-opacity=".18"></path>
+          <line x1="130" y1="130" x2="130" y2="20" stroke="#38E1F0" stroke-width="1.5"></line>
+        </g>
+        <path d="{{scanPts}}" fill="none" stroke="#38E1F0" stroke-width="2.2" stroke-linecap="square"></path>
+        <rect x="125" y="125" width="10" height="10" style="fill: var(--acc)"></rect>
+      </svg>
+    </div>
+    <div class="mono" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 12px; font-size: 11px; color: #A3AEB9">
+      <span>Zasięg maks. <span style="color: #E6EBF0">{{scanMax}} m</span></span>
+      <span>Min. odl. <span style="color: #E6EBF0">{{scanMin}} m</span></span>
+      <span>Rozdz. kąt. <span style="color: #E6EBF0">1°</span></span>
+      <span>Częstotl. <span style="color: #E6EBF0">5 Hz</span></span>
+    </div>
+  </section>
+
+  <section class="panel fadeup" style="flex: 4 1 340px; min-width: 0; padding: 18px; display: flex; flex-direction: column; gap: 14px; animation-delay: 460ms">
+    <div style="display: flex; justify-content: space-between; align-items: center">
+      <h2 class="ttl">Wi-Fi wg pomieszczeń</h2>
+      <button class="chip">Wyczyść pomiary</button>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 12px">
+      <sc-for list="{{roomWifi}}" as="r" hint-placeholder-count="6">
+        <div style="display: flex; flex-direction: column; gap: 5px">
+          <div style="display: flex; justify-content: space-between; font-size: 13px"><span>{{r.name}}</span><span class="mono" style="color: {{r.color}}; font-weight: 700">{{r.dbm}} dBm</span></div>
+          <div style="height: 8px; background: #1A2129"><div class="hbar" style="height: 8px; width: {{r.pct}}%; background: {{r.color}}; animation-delay: {{r.delay}}ms"></div></div>
+          <div class="mono" style="font-size: 10px; color: #8B96A3">min {{r.min}} · maks {{r.max}} · {{r.n}} pomiarów</div>
+        </div>
+      </sc-for>
+    </div>
+    <div style="margin-top: auto; padding: 12px; border: 1px solid #3A2A12; background: #1A130A; display: flex; gap: 10px; align-items: flex-start">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#F08A24" stroke-width="1.6" aria-hidden="true" style="flex: none; margin-top: 2px"><path d="M8 1.5L15 14H1z"></path><path d="M8 6v4M8 11.5v1"></path></svg>
+      <span style="font-size: 13px; color: #F3C58E">Najsłabszy zasięg: <b>{{weakRoom}}</b>. Rozważ punkt dostępowy mesh w korytarzu.</span>
+    </div>
+  </section>
+</div>
+
+<!-- ═════════ ROW 3: HISTORY + CONSUMABLES ═════════ -->
+<div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: stretch">
+
+  <section class="panel fadeup" style="flex: 8 1 640px; min-width: 0; padding: 18px; display: flex; flex-direction: column; gap: 14px; animation-delay: 540ms">
+    <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px">
+      <h2 class="ttl">Historia sprzątania</h2>
+      <div style="display: flex; border: 1px solid #1D242C" class="mono">
+        <div style="padding: 6px 14px; border-right: 1px solid #1D242C"><div class="lbl" style="font-size: 9px">30 dni</div><div style="font-weight: 700">41 sprzątań</div></div>
+        <div style="padding: 6px 14px; border-right: 1px solid #1D242C"><div class="lbl" style="font-size: 9px">Łączny czas</div><div style="font-weight: 700">32 h 18 min</div></div>
+        <div style="padding: 6px 14px"><div class="lbl" style="font-size: 9px">Powierzchnia</div><div style="font-weight: 700">2 146 m²</div></div>
+      </div>
+    </div>
+    <div style="overflow-x: auto">
+      <table style="width: 100%; min-width: 760px; border-collapse: collapse; font-size: 13px">
+        <thead>
+          <tr class="lbl" style="text-align: left">
+            <th style="padding: 10px 8px; border-bottom: 1px solid #2A333D; font-weight: 500">Start</th>
+            <th style="padding: 10px 8px; border-bottom: 1px solid #2A333D; font-weight: 500">Czas</th>
+            <th style="padding: 10px 8px; border-bottom: 1px solid #2A333D; font-weight: 500">Obszar</th>
+            <th style="padding: 10px 8px; border-bottom: 1px solid #2A333D; font-weight: 500">Powierzchnia</th>
+            <th style="padding: 10px 8px; border-bottom: 1px solid #2A333D; font-weight: 500">Bateria</th>
+            <th style="padding: 10px 8px; border-bottom: 1px solid #2A333D; font-weight: 500">Tryb</th>
+            <th style="padding: 10px 8px; border-bottom: 1px solid #2A333D; font-weight: 500">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <sc-for list="{{history}}" as="h" hint-placeholder-count="7">
+            <tr class="row">
+              <td class="mono" style="padding: 11px 8px; border-bottom: 1px solid #1A2028">{{h.start}}</td>
+              <td class="mono" style="padding: 11px 8px; border-bottom: 1px solid #1A2028">{{h.dur}}</td>
+              <td style="padding: 11px 8px; border-bottom: 1px solid #1A2028">{{h.rooms}}</td>
+              <td style="padding: 11px 8px; border-bottom: 1px solid #1A2028">
+                <div style="display: flex; align-items: center; gap: 10px">
+                  <span class="mono" style="width: 64px">{{h.area}} m²</span>
+                  <div style="flex: 1 1 auto; min-width: 60px; height: 4px; background: #1A2129"><div class="hbar" style="height: 4px; width: {{h.areaPct}}%; background: #8B96A3; animation-delay: {{h.delay}}ms"></div></div>
+                </div>
+              </td>
+              <td class="mono" style="padding: 11px 8px; border-bottom: 1px solid #1A2028">{{h.bat}}</td>
+              <td class="mono" style="padding: 11px 8px; border-bottom: 1px solid #1A2028; color: #A3AEB9">{{h.mode}}</td>
+              <td style="padding: 11px 8px; border-bottom: 1px solid #1A2028"><span class="mono" style="display: inline-flex; align-items: center; gap: 6px; font-size: 11px; padding: 3px 8px; border: 1px solid {{h.color}}; color: {{h.color}}; text-transform: uppercase; letter-spacing: .06em"><span class="{{h.dotCls}}" style="width: 6px; height: 6px; background: {{h.color}}"></span>{{h.status}}</span></td>
+            </tr>
+          </sc-for>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel fadeup" style="flex: 4 1 340px; min-width: 0; padding: 18px; display: flex; flex-direction: column; gap: 14px; animation-delay: 620ms">
+    <h2 class="ttl">Konserwacja</h2>
+    <sc-for list="{{consumables}}" as="c" hint-placeholder-count="4">
+      <div style="display: flex; flex-direction: column; gap: 6px; padding-bottom: 12px; border-bottom: 1px solid #1D242C">
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px">
+          <span style="font-size: 14px">{{c.name}}</span>
+          <span class="mono" style="font-size: 12px; color: {{c.color}}; font-weight: 700">{{c.left}}%</span>
+        </div>
+        <div style="display: flex; gap: 2px">
+          <sc-for list="{{c.ticks}}" as="t" hint-placeholder-count="20">
+            <div style="flex: 1 1 0; height: 10px; background: {{t.bg}}"></div>
+          </sc-for>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center">
+          <span class="mono" style="font-size: 11px; color: #8B96A3">{{c.used}} h / {{c.life}} h · wymiana za ~{{c.days}} dni</span>
+          <button class="chip" style="min-height: 28px; padding: 0 8px; font-size: 10px">Reset</button>
+        </div>
+      </div>
+    </sc-for>
+  </section>
+</div>
+
+<!-- ═════════ ROW 4: SCHEDULE + EVENTS ═════════ -->
+<div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: stretch">
+  <section class="panel fadeup" style="flex: 7 1 560px; min-width: 0; padding: 18px; display: flex; flex-direction: column; gap: 14px; animation-delay: 700ms">
+    <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px">
+      <h2 class="ttl">Harmonogram</h2>
+      <button class="chip">+ Dodaj zadanie</button>
+    </div>
+    <div style="overflow-x: auto">
+      <div style="min-width: 620px">
+        <div style="display: grid; grid-template-columns: 40px repeat(7, minmax(0, 1fr)); gap: 4px">
+          <span></span>
+          <sc-for list="{{week}}" as="d" hint-placeholder-count="7">
+            <span class="mono" style="font-size: 11px; text-align: center; color: {{d.color}}; padding-bottom: 6px; border-bottom: 2px solid {{d.border}}">{{d.name}}</span>
+          </sc-for>
+        </div>
+        <div style="display: grid; grid-template-columns: 40px repeat(7, minmax(0, 1fr)); gap: 4px; margin-top: 6px; height: 200px">
+          <div class="mono" style="display: flex; flex-direction: column; justify-content: space-between; font-size: 10px; color: #8B96A3"><span>00</span><span>06</span><span>12</span><span>18</span><span>24</span></div>
+          <sc-for list="{{week}}" as="d" hint-placeholder-count="7">
+            <div style="position: relative; background: #0A0D10; border: 1px solid #1A2028">
+              <div style="position: absolute; left: 0; right: 0; top: 0; height: 33.3%; background: repeating-linear-gradient(135deg, #141A20 0 4px, transparent 4px 8px)"></div>
+              <div style="position: absolute; left: 0; right: 0; bottom: 0; height: 8.3%; background: repeating-linear-gradient(135deg, #141A20 0 4px, transparent 4px 8px)"></div>
+              <sc-if value="{{d.has}}" hint-placeholder-val="{{ true }}">
+                <div class="bar" style="position: absolute; left: 3px; right: 3px; top: {{d.top}}%; height: {{d.h}}%; background: var(--acc); color: #0A0D10; padding: 3px 4px; overflow: hidden; animation-delay: {{d.delay}}ms">
+                  <div class="mono" style="font-size: 10px; font-weight: 700">{{d.time}}</div>
+                </div>
+                <div class="mono" style="position: absolute; left: 3px; right: 3px; top: calc({{d.top}}% + {{d.hpx}}px); font-size: 9px; color: #A3AEB9; line-height: 1.3">{{d.what}}</div>
+              </sc-if>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+    <div class="mono" style="display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 11px; color: #A3AEB9">
+      <span style="display: flex; align-items: center; gap: 6px"><span style="width: 10px; height: 10px; background: var(--acc)"></span>zaplanowane sprzątanie</span>
+      <span style="display: flex; align-items: center; gap: 6px"><span style="width: 10px; height: 10px; background: repeating-linear-gradient(135deg, #3A4552 0 2px, transparent 2px 4px)"></span>nie przeszkadzać 22:00–08:00</span>
+    </div>
+  </section>
+
+  <section class="panel fadeup" style="flex: 5 1 400px; min-width: 0; padding: 18px; display: flex; flex-direction: column; gap: 10px; animation-delay: 780ms">
+    <div style="display: flex; justify-content: space-between; align-items: center">
+      <h2 class="ttl">Zdarzenia</h2>
+      <span class="lbl">dziś</span>
+    </div>
+    <ol style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column">
+      <sc-for list="{{events}}" as="e" hint-placeholder-count="7">
+        <li class="row" style="display: grid; grid-template-columns: 52px 10px minmax(0, 1fr); gap: 12px; align-items: start; padding: 9px 4px; border-bottom: 1px solid #1A2028">
+          <span class="mono" style="font-size: 12px; color: #8B96A3">{{e.t}}</span>
+          <span style="width: 8px; height: 8px; background: {{e.color}}; margin-top: 5px"></span>
+          <span style="font-size: 13px; line-height: 1.45">{{e.msg}}</span>
+        </li>
+      </sc-for>
+    </ol>
+  </section>
+</div>
+
+<footer class="mono" style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; font-size: 11px; color: #8B96A3; padding: 6px 2px 20px">
+  <span>Mapa z lidaru · 5 cm/piksel · 12.0 × 7.5 m · 90.0 m²</span>
+  <span>Ostatnia synchronizacja 06:59:12</span>
+</footer>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#C8FF3D","options":["#C8FF3D","#38E1F0","#FF8A3D","#E6EBF0"]},"$preview":{"width":1440,"height":2280}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      view: '3d', running: true, wallH: 38, fan: 'turbo', water: 'off', passes: 1, chart: 'session',
+      layers: { walls: true, obst: true, wifi: true, lidar: true, path: true, labels: true },
+      opts: { carpet: true, edge: true, dnd: true, mop: false },
+      rooms: { salon: true, kuchnia: true, korytarz: true, sypialnia: false, lazienka: false, gabinet: false }
+    };
+  }
+
+  geo() {
+    if (this._g) return this._g;
+    let seed = 7;
+    const R = () => { seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296; };
+    const WALLS = [[0,0,600,0],[600,0,600,375],[0,375,600,375],[0,0,0,375],[330,0,330,50],[330,140,420,140],[480,140,600,140],[330,200,330,230],[0,230,180,230],[230,230,290,230],[335,230,470,230],[520,230,600,230],[260,230,260,375],[400,230,400,375]];
+    const OBST = [[20,20,140,40],[25,265,150,95],[470,325,118,42],[440,58,90,36],[280,300,100,60]];
+    const ROOMS = [
+      { id: 'salon', name: 'Salon', x: 0, y: 0, w: 330, h: 230 },
+      { id: 'kuchnia', name: 'Kuchnia', x: 330, y: 0, w: 270, h: 140 },
+      { id: 'korytarz', name: 'Korytarz', x: 330, y: 140, w: 270, h: 90 },
+      { id: 'sypialnia', name: 'Sypialnia', x: 0, y: 230, w: 260, h: 145 },
+      { id: 'lazienka', name: 'Łazienka', x: 260, y: 230, w: 140, h: 145 },
+      { id: 'gabinet', name: 'Gabinet', x: 400, y: 230, w: 200, h: 145 }
+    ];
+    const seg = (s, i, base) => {
+      const dx = s[2] - s[0], dy = s[3] - s[1];
+      return { x: s[0], y: s[1], len: Math.round(Math.hypot(dx, dy)), a: Math.round(Math.atan2(dy, dx) * 180 / Math.PI), delay: base + i * 70 };
+    };
+    const walls = WALLS.map((s, i) => seg(s, i, 0));
+    const obstSegs = [];
+    OBST.forEach(o => { const [x, y, w, h] = o; obstSegs.push([x,y,x+w,y],[x+w,y,x+w,y+h],[x,y+h,x+w,y+h],[x,y,x,y+h]); });
+    const obstSides = obstSegs.map((s, i) => seg(s, i, 900));
+    const obstTops = OBST.map(o => ({ x: o[0], y: o[1], w: o[2], h: o[3] }));
+    const allSegs = WALLS.concat(obstSegs);
+
+    const inter = (ax, ay, bx, by, c) => {
+      const r1 = bx - ax, r2 = by - ay, s1 = c[2] - c[0], s2 = c[3] - c[1];
+      const den = r1 * s2 - r2 * s1;
+      if (Math.abs(den) < 1e-9) return null;
+      const t = ((c[0] - ax) * s2 - (c[1] - ay) * s1) / den;
+      const u = ((c[0] - ax) * r2 - (c[1] - ay) * r1) / den;
+      return (t > 1e-6 && t <= 1 && u >= 0 && u <= 1) ? t : null;
+    };
+
+    // Wi-Fi heatmap
+    const router = { x: 565, y: 30 };
+    const stops = [[-90,[214,51,74]],[-78,[240,138,36]],[-66,[242,210,60]],[-52,[123,224,74]]];
+    const col = (v, a) => {
+      const c = Math.max(-90, Math.min(-52, v));
+      let i = 0; while (i < stops.length - 2 && c > stops[i + 1][0]) i++;
+      const [v0, c0] = stops[i], [v1, c1] = stops[i + 1];
+      const t = (c - v0) / (v1 - v0);
+      const m = c0.map((x, k) => Math.round(x + (c1[k] - x) * t));
+      return a == null ? 'rgb(' + m.join(',') + ')' : 'rgba(' + m.join(',') + ',' + a + ')';
+    };
+    const cells = [];
+    const roomStats = ROOMS.map(() => ({ sum: 0, n: 0, min: 0, max: -200 }));
+    for (let gy = 0; gy < 15; gy++) for (let gx = 0; gx < 24; gx++) {
+      const cx = gx * 25 + 12.5, cy = gy * 25 + 12.5;
+      const d = Math.hypot(cx - router.x, cy - router.y);
+      let wallsHit = 0;
+      WALLS.slice(4).forEach(s => { if (inter(cx, cy, router.x, router.y, s) !== null) wallsHit++; });
+      const v = Math.round(-36 - 24 * Math.log10(1 + d / 50) - wallsHit * 6.5 + (R() - .5) * 4);
+      cells.push({ x: gx * 25, y: gy * 25, color: col(v, .55), delay: Math.round(d * 2.2) + 600 });
+      ROOMS.forEach((r, k) => {
+        if (cx > r.x && cx < r.x + r.w && cy > r.y && cy < r.y + r.h) {
+          const st = roomStats[k]; st.sum += v; st.n++; st.min = Math.min(st.min, v); st.max = Math.max(st.max, v);
+        }
+      });
+    }
+    const roomWifi = ROOMS.map((r, k) => {
+      const st = roomStats[k]; const avg = Math.round(st.sum / st.n);
+      return { name: r.name, dbm: avg, color: col(avg), pct: Math.round(Math.max(4, Math.min(100, (avg + 95) / 55 * 100))), min: st.min, max: st.max, n: Math.round(st.n * 1572 / 360), delay: 400 + k * 90 };
+    });
+    let weak = roomWifi[0]; roomWifi.forEach(r => { if (r.dbm < weak.dbm) weak = r; });
+
+    // Lidar point cloud
+    let lidarD = ''; let lidarCount = 0;
+    allSegs.forEach(s => {
+      const dx = s[2] - s[0], dy = s[3] - s[1], L = Math.hypot(dx, dy);
+      const nx = -dy / L, ny = dx / L;
+      for (let p = 0; p <= L; p += 5) {
+        if (R() < .12) continue;
+        const j = (R() - .5) * 3.2;
+        const x = s[0] + dx * p / L + nx * j, y = s[1] + dy * p / L + ny * j;
+        lidarD += 'M' + x.toFixed(1) + ' ' + y.toFixed(1) + 'h0.01';
+        lidarCount++;
+      }
+    });
+
+    // Cleaning path (boustrophedon in living room)
+    const pts = [[585,190],[470,188],[345,186],[312,212]];
+    let up = true;
+    for (let x = 312; x >= 22; x -= 22) { pts.push([x, up ? 212 : 76]); up = !up; pts.push([x - 22 >= 22 ? x : x, up ? 212 : 76]); }
+    const clean = [pts[0]];
+    for (let i = 1; i < pts.length; i++) { const a = clean[clean.length - 1], b = pts[i]; if (a[0] !== b[0] || a[1] !== b[1]) clean.push(b); }
+    // ensure horizontal hops between columns
+    const path = [clean[0]];
+    for (let i = 1; i < clean.length; i++) {
+      const a = path[path.length - 1], b = clean[i];
+      if (a[0] !== b[0] && a[1] !== b[1] && i > 3) path.push([b[0], a[1]]);
+      path.push(b);
+    }
+    let pathLen = 0;
+    for (let i = 1; i < path.length; i++) pathLen += Math.hypot(path[i][0] - path[i-1][0], path[i][1] - path[i-1][1]);
+    const pathD = 'M' + path.map(p => p[0] + ' ' + p[1]).join(' L');
+
+    // Lidar 360 polar scan from a fixed robot pose
+    const rob = { x: 205, y: 150 };
+    let scanPts = '', scanFill = '', dmax = 0, dmin = 999, scanCount = 0;
+    for (let a = 0; a < 360; a++) {
+      const rad = a * Math.PI / 180;
+      const ex = rob.x + Math.cos(rad) * 400, ey = rob.y + Math.sin(rad) * 400;
+      let best = 1;
+      allSegs.forEach(s => { const t = inter(rob.x, rob.y, ex, ey, s); if (t !== null && t < best) best = t; });
+      const dpx = best * 400 * (1 + (R() - .5) * .02);
+      dmax = Math.max(dmax, dpx); dmin = Math.min(dmin, dpx);
+      const r = dpx * 110 / 400;
+      const px = 130 + Math.cos(rad) * r, py = 130 + Math.sin(rad) * r;
+      scanFill += (a === 0 ? 'M' : 'L') + px.toFixed(1) + ' ' + py.toFixed(1);
+      if (R() > .08) { scanPts += 'M' + px.toFixed(1) + ' ' + py.toFixed(1) + 'h0.01'; scanCount++; }
+    }
+    scanFill += 'Z';
+
+    // Battery discharge sessions
+    const X = t => 40 + t / 100 * 550, Y = p => 10 + (100 - p) / 70 * 180;
+    const sess = [[19,78],[74,53],[31,76],[92,39],[69,56]];
+    const series = sess.map((s, k) => {
+      const [dur, end] = s; const out = [];
+      for (let t = 0; t <= dur; t += 1) {
+        const p = 100 - (100 - end) * Math.pow(t / dur, 1.08) + Math.sin(t * 1.7 + k) * .35;
+        out.push(X(t).toFixed(1) + ',' + Y(Math.min(100, p)).toFixed(1));
+      }
+      return out.join(' ');
+    });
+
+    const dailyV = [18,0,22,19,0,31,24,17,0,26,20,23,29,14];
+    const days = ['27','28','29','30','31','1','2','3','4','5','6','7','8','9'];
+    const daily = dailyV.map((v, i) => ({ v: v || '—', h: Math.max(1, v / 34 * 88), day: days[i], color: i === 13 ? 'var(--acc)' : (v > 27 ? '#F08A24' : '#4A5663'), delay: i * 45 }));
+    const dailySum = dailyV.reduce((a, b) => a + b, 0);
+
+    this._g = {
+      walls, obstSides, obstTops, cells, roomWifi, weakRoom: weak.name, lidarD, lidarCount, pathD, pathLen: Math.round(pathLen), pathM: (pathLen / 50).toFixed(1),
+      scanPts, scanFill, scanMax: (dmax / 50).toFixed(1), scanMin: (dmin / 50).toFixed(2), scanCount,
+      series, liveX: X(19), liveY: Y(78), daily, dailySum, ROOMS,
+      rooms: ROOMS.map(r => ({ name: r.name, area: (r.w * r.h / 2500).toFixed(1), lx: r.x + r.w / 2, ly: r.y + r.h / 2 }))
+    };
+    return this._g;
+  }
+
+  renderVals() {
+    const g = this.geo();
+    const s = this.state;
+    const set = (patch) => this.setState(patch);
+    const onoff = (b) => (b ? 'on' : '');
+
+    const viewOpts = [['2d','2D'],['3d','3D'],['iso','ISO'],['orbit','Orbita']].map(([id, label]) => ({
+      label, cls: onoff(s.view === id), pressed: String(s.view === id), pick: () => set({ view: id })
+    }));
+    const LAYERS = [['walls','Ściany'],['obst','Meble'],['wifi','Heatmapa Wi-Fi'],['lidar','Chmura lidar'],['path','Trasa'],['labels','Etykiety']];
+    const layerItems = LAYERS.map(([k, label]) => ({
+      label, cls: onoff(s.layers[k]), pressed: String(!!s.layers[k]),
+      toggle: () => set({ layers: Object.assign({}, s.layers, { [k]: !s.layers[k] }) })
+    }));
+    const lyr = {}; Object.keys(s.layers).forEach(k => { lyr[k] = s.layers[k] ? '' : 'off'; });
+
+    const mk = (key, list) => list.map(([id, label]) => ({ label, cls: onoff(s[key] === id), pressed: String(s[key] === id), pick: () => set({ [key]: id }) }));
+    const fanOpts = mk('fan', [['quiet','Cicha'],['balanced','Balans'],['turbo','Turbo'],['max','Max']]);
+    const waterOpts = mk('water', [['off','Wył.'],['low','Niski'],['mid','Średni'],['high','Wysoki']]);
+    const passOpts = mk('passes', [[1,'1×'],[2,'2×'],[3,'3×']]);
+    const chartOpts = mk('chart', [['session','Sesje'],['daily','14 dni']]);
+
+    const OPTS = [['carpet','Wzmocnienie na dywanie','auto Max na wykrytym dywanie'],['edge','Dokładne krawędzie','wolniej wzdłuż ścian'],['dnd','Nie przeszkadzać','22:00 – 08:00'],['mop','Strefy bez mopa','omijaj dywany przy mopowaniu']];
+    const optItems = OPTS.map(([k, label, hint]) => ({
+      label, hint, cls: onoff(s.opts[k]), pressed: String(!!s.opts[k]),
+      toggle: () => set({ opts: Object.assign({}, s.opts, { [k]: !s.opts[k] }) })
+    }));
+
+    const roomChips = g.ROOMS.map(r => ({
+      name: r.name, cls: onoff(s.rooms[r.id]), pressed: String(!!s.rooms[r.id]),
+      toggle: () => set({ rooms: Object.assign({}, s.rooms, { [r.id]: !s.rooms[r.id] }) })
+    }));
+    const area = g.ROOMS.reduce((a, r) => a + (s.rooms[r.id] ? r.w * r.h / 2500 : 0), 0);
+    const fanF = { quiet: .7, balanced: .85, turbo: 1, max: 1.35 }[s.fan];
+    const estMin = Math.round(area * 0.82 * s.passes);
+    const estBat = Math.round(area * 0.55 * fanF * s.passes + (s.water !== 'off' ? area * .08 : 0));
+
+    const batSegs = []; for (let i = 0; i < 20; i++) batSegs.push({ cls: i < 15 ? 'on' : (i === 15 ? 'last' : '') });
+
+    const H = [
+      ['Dziś 07:02','18:42','Salon · Korytarz',26.3,'−22%','Turbo','W toku','var(--acc)','blink'],
+      ['8.11 18:30','74:10','Całe mieszkanie',86.4,'−47%','Balans','Ukończono','#7BE04A',''],
+      ['7.11 09:15','31:04','Salon · Kuchnia',38.9,'−24%','Turbo','Ukończono','#7BE04A',''],
+      ['6.11 19:00','92:22','Całe mieszkanie',87.1,'−61%','Max + mop','Ukończono','#7BE04A',''],
+      ['5.11 08:40','09:51','Sypialnia',6.2,'−7%','Turbo','Przerwano','#F08A24',''],
+      ['4.11 18:30','68:37','Całe mieszkanie',85.0,'−44%','Balans','Ukończono','#7BE04A',''],
+      ['2.11 10:05','22:10','Kuchnia',15.1,'−15%','Max','Ukończono','#7BE04A','']
+    ];
+    const history = H.map((h, i) => ({ start: h[0], dur: h[1], rooms: h[2], area: h[3].toFixed(1), areaPct: Math.round(h[3] / 90 * 100), bat: h[4], mode: h[5], status: h[6], color: h[7], dotCls: h[8], delay: 300 + i * 80 }));
+
+    const C = [['Szczotka główna',182,300],['Szczotka boczna',141,200],['Filtr HEPA',121,150],['Czujniki',22,30]];
+    const consumables = C.map(([name, used, life]) => {
+      const left = Math.round((1 - used / life) * 100);
+      const color = left < 25 ? '#F08A24' : '#E6EBF0';
+      const on = Math.round(left / 5);
+      const ticks = []; for (let i = 0; i < 20; i++) ticks.push({ bg: i < on ? (left < 25 ? '#F08A24' : 'var(--acc)') : '#1A2129' });
+      return { name, used, life, left, color, ticks, days: Math.round((life - used) / 0.9) };
+    });
+
+    const W = [['Pn','08:30',8.5,1.2,'Całe mieszkanie'],['Wt'],['Śr','08:30',8.5,1.2,'Całe mieszkanie'],['Cz'],['Pt','08:30',8.5,1.2,'Całe mieszkanie'],['Sb','10:00',10,.8,'Kuchnia + mop'],['Nd']];
+    const week = W.map((d, i) => ({
+      name: d[0], has: d.length > 1, time: d[1] || '', top: d[2] ? (d[2] / 24 * 100).toFixed(1) : 0, h: d[3] ? (d[3] / 24 * 100 + 6).toFixed(1) : 0,
+      hpx: d[3] ? Math.round((d[3] / 24 + .06) * 200) + 4 : 0, what: d[4] || '', delay: 200 + i * 60,
+      color: i === 0 ? 'var(--acc)' : '#A3AEB9', border: i === 0 ? 'var(--acc)' : '#1D242C'
+    }));
+
+    const events = [
+      ['07:21','Wykryto dywan — moc ssania podniesiona do Max','#38E1F0'],
+      ['07:16','Słaby sygnał Wi-Fi −81 dBm (Salon, przy oknie)','#F08A24'],
+      ['07:09','Ominięto przeszkodę: kabel przy sofie','#A3AEB9'],
+      ['07:04','Lokalizacja na mapie potwierdzona (dopasowanie 98%)','#38E1F0'],
+      ['07:02','Start sprzątania z harmonogramu: Salon, Korytarz','var(--acc)'],
+      ['06:58','Mapa zaktualizowana: +12 punktów ścian','#A3AEB9'],
+      ['05:40','Ładowanie zakończone — 100%','#7BE04A']
+    ].map(e => ({ t: e[0], msg: e[1], color: e[2] }));
+
+    return {
+      accent: this.props.accent ?? '#C8FF3D',
+      statusLabel: s.running ? 'SPRZĄTANIE' : 'PAUZA', statusDotCls: s.running ? 'blink' : '',
+      runLabel: s.running ? 'Pauza' : 'Wznów', runIcon: s.running ? 'M3 2h3v10H3zM8 2h3v10H8z' : 'M3 1.5l9 5.5-9 5.5z',
+      toggleRun: () => set({ running: !s.running }),
+      sceneCls: s.running ? '' : 'paused',
+      viewCls: s.view === 'orbit' ? 'v-orbit' : 'v-' + s.view,
+      viewOpts, layerItems, lyr, fanOpts, waterOpts, passOpts, chartOpts, optItems, roomChips,
+      wallH: s.wallH, wallHcm: s.wallH * 2, setWallH: (e) => set({ wallH: Number(e.target.value) }),
+      walls: g.walls, obstSides: g.obstSides, obstTops: g.obstTops, cells: g.cells, rooms: g.rooms,
+      lidarD: g.lidarD, lidarCount: g.lidarCount, lidarLayers: [{ z: 2, op: 1 }, { z: 12, op: .7 }, { z: 22, op: .5 }, { z: 32, op: .3 }],
+      pathD: g.pathD, pathLen: g.pathLen, pathM: g.pathM,
+      batSegs, selArea: area.toFixed(1), progressPct: area > 0 ? Math.min(100, Math.round(26.3 / area * 100)) : 0,
+      estMin, estBat, estBatColor: estBat > 70 ? '#F08A24' : '#E6EBF0',
+      showSession: s.chart === 'session', showDaily: s.chart === 'daily',
+      s0: g.series[0], s1: g.series[1], s2: g.series[2], s3: g.series[3], s4: g.series[4], liveX: g.liveX, liveY: g.liveY,
+      daily: g.daily, dailySum: g.dailySum,
+      scanPts: g.scanPts, scanFill: g.scanFill, scanMax: g.scanMax, scanMin: g.scanMin, scanCount: g.scanCount,
+      roomWifi: g.roomWifi, weakRoom: g.weakRoom,
+      history, consumables, week, events
+    };
+  }
+}
+</script>
+</body>
+</html>
