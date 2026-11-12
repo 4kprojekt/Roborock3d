@@ -170,6 +170,7 @@ Every step returns: result, movement, pose and sensor events (bumper, tilt...) t
       "Switch the robot to network “{}”? If the password is wrong, the robot disappears from the network and has to be reset.",
     "ładowanie…": "loading…", "Brak połączenia z lokalnym serwerem panelu (server.py). Ponawiam…": "No connection to the local panel server (server.py). Retrying…",
     "Przywróć": "Restore", "Kopia {}": "Snapshot {}", "Test": "Test", "(ukryta)": "(hidden)",
+    "mapa": "map", "Salon": "Living room", "Kuchnia": "Kitchen",   // "mapa" = pose source; rooms of the mock robot
     "pobór": "draw", "ładowanie": "charging", "stoi": "stopped", "Sprzątanie": "Cleaning", "Skanowanie": "Scan", "Teraz": "Now",
     "{} promieni": "{} rays", "zgodność odbicia {}": "reflection match {}", "{} ↔ {}": "{} ↔ {}",
     "zostało {} h z {} h": "{} h left of {} h", "zostało {} h": "{} h left",
@@ -260,9 +261,9 @@ Every step returns: result, movement, pose and sensor events (bumper, tilt...) t
         const joined = core.split(sep).map(tr).join(sep);
         if (joined !== core) { out = joined; break; }
       }
-      // "→ text", "⚠ text", "12× text 3", "· text ·"
+      // "→ text", "⚠ text", "▼ text (20)", "12× text 3", "· text ·"
       if (out === null) {
-        const g = core.match(/^(→ |⚠ |— |\d+× |· )?(.*?)( \d+| ·)?$/);
+        const g = core.match(/^(→ |⚠ |— |▼ |\d+× |· )?(.*?)( \d+| \(\d+\)| ·)?$/);
         if (g && (g[1] || g[3]) && tr(g[2]) !== g[2]) out = (g[1] ?? "") + tr(g[2]) + (g[3] ?? "");
       }
       if (out === null && /[ąćęłńóśźż]/i.test(core) && missing.size < 500) missing.add(core);

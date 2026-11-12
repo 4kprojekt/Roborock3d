@@ -4,6 +4,16 @@ A local control panel and AI (MCP) bridge for a Roborock vacuum running [Valetud
 2D/3D map, live raw lidar, MCU sensor data (bumper, cliff, wheel and brush current), cleaning history,
 Wi-Fi heatmap, "problem spots" where the robot keeps bumping into things, no-go zones and scripted routes.
 
+![2D map with the Wi-Fi heatmap, route and problem spots](docs/panel_2d.png)
+
+| First-person view (FPV) | Run history and replay |
+| :---: | :---: |
+| ![FPV view with the Wi-Fi heatmap on the floor](docs/panel_fpv.png) | ![Run history, replay chart and Wi-Fi by room](docs/panel_history.png) |
+
+![Manual control, step programs, events and problem spots](docs/panel_control.png)
+
+Screenshots show the built-in fake robot (`--robot mock`) with generated demo data, not a real flat.
+
 > [!WARNING]
 > **This whole project was written by AI** (Claude, with a human giving directions and testing).
 > It has not been reviewed line by line by an experienced developer. Read the code before you run it,
@@ -44,6 +54,7 @@ Environment variables and command-line flags override `.env`.
 | `ROBOROCK_TAP` / `--no-tap` | no | `1` | `0` = do not connect over SSH (no live lidar/sensors) |
 | `ROBOROCK_PANEL_HOST` / `--host` | no | `127.0.0.1` | Panel listen address. The panel has **no login**, do not expose it. |
 | `ROBOROCK_PANEL_PORT` / `--port` | no | `8780` | Panel port |
+| `ROBOROCK_DATA` | no | `data/` | Where sessions, events and Wi-Fi samples are stored. Real environment variable only, not read from `.env`. Use a separate folder for `mock`. |
 | `ROBOROCK_PANEL` | no | `http://127.0.0.1:8780` | Used by `mcp_server.py` to reach the panel (set in the MCP client config) |
 
 Fixed values you may need to change in code for another model or firmware:

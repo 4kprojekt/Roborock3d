@@ -40,7 +40,7 @@ import sensors
 
 ROOT = Path(__file__).resolve().parent
 STATIC = ROOT / "static"
-DATA = ROOT / "data"
+DATA = Path(os.environ.get("ROBOROCK_DATA") or ROOT / "data")   # env only (not .env): e.g. a separate dir for mock
 SAMPLES = DATA / "wifi_samples.jsonl"
 SESSIONS = DATA / "sessions"
 PHOTOS = DATA / "photos"
